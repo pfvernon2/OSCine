@@ -13,14 +13,14 @@ import Network
 public let kOSCServiceTypeUDP: String = "_osc._udp"
 public let kOSCServiceTypeTCP: String = "_osc._tcp"
 
-enum OSCNetworkingError: Error {
+public enum OSCNetworkingError: Error {
     case invalidNetworkDesignation
     case notConnected
 }
 
 //MARK: - OSCServerDelegate
 
-protocol OSCServerDelegate: AnyObject {
+public protocol OSCServerDelegate: AnyObject {
     func listenerStateChange(state: NWListener.State)
 }
 
@@ -96,7 +96,7 @@ extension OSCNetworkServer {
 
 //MARK: - OSCServerUDP
 
-class OSCServerUDP: OSCNetworkServer {
+public class OSCServerUDP: OSCNetworkServer {
     var serviceType: String = kOSCServiceTypeUDP
     weak var delegate: OSCServerDelegate? = nil
     internal var listener: NWListener? = nil
@@ -114,7 +114,7 @@ class OSCServerUDP: OSCNetworkServer {
 
 //MARK: - OSCServerTCP
 
-class OSCServerTCP: OSCNetworkServer {
+public class OSCServerTCP: OSCNetworkServer {
     var serviceType: String = kOSCServiceTypeTCP
     weak var delegate: OSCServerDelegate? = nil
     internal var listener: NWListener? = nil
@@ -142,6 +142,7 @@ class OSCServerTCP: OSCNetworkServer {
 }
 
 //MARK: - OSCConnectionManager
+
 internal typealias NWConnectionArray = Array<NWConnection>
 internal class OSCServerConnectionManager {
     var addressSpace = OSCAddressSpace()

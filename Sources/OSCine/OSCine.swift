@@ -13,7 +13,7 @@ import Foundation
 
 //MARK: - Definitions
 
-enum OSCEncodingError: Error {
+public enum OSCEncodingError: Error {
     case stringEncodingFailure
     case invalidArgumentList
     case invalidMessage
@@ -69,7 +69,7 @@ extension OSCDataType {
 //MARK: - Data Types
 
 //OSC Data Types
-typealias OSCInt = Int32
+public typealias OSCInt = Int32
 extension OSCInt: OSCDataType {
     var tag: OSCDataTypeTag { .int }
     
@@ -92,7 +92,7 @@ extension OSCInt: OSCDataType {
     }
 }
 
-typealias OSCFloat = Float32
+public typealias OSCFloat = Float32
 extension OSCFloat: OSCDataType {
     var tag: OSCDataTypeTag { .float }
     
@@ -121,29 +121,15 @@ extension OSCFloat: OSCDataType {
     }
 }
 
-typealias OSCBool = Bool
+public typealias OSCBool = Bool
 extension OSCBool: OSCDataType {
     var tag: OSCDataTypeTag { self ? .true : .false }
 }
 
-struct OSCTimeTag: Codable, OSCDataType, Equatable, Comparable {
+public struct OSCTimeTag: Codable, Equatable, Comparable {
     var seconds: UInt32
     var picoseconds: UInt32
-    
-    private static var OSCEpoch: Date = {
-        //midnight on January 1, 1900
-        let components = DateComponents(calendar: Calendar(identifier: .gregorian),
-                                        year: 1900,
-                                        month: 1,
-                                        day: 1,
-                                        hour: 0)
-        guard let origin = components.date else {
-            fatalError("OSC Epoch Date could not be computed")
-        }
         
-        return origin
-    }()
-    
     var date: Date {
         var interval = TimeInterval(seconds)
         interval += TimeInterval(Double(picoseconds) / 0xffffffff)
@@ -174,7 +160,27 @@ struct OSCTimeTag: Codable, OSCDataType, Equatable, Comparable {
         seconds = UInt32(UInt64(secondsSinceOSCEpoch) & 0xffffffff)
         picoseconds = UInt32(fmod(secondsSinceOSCEpoch, 1.0) * Double(0xffffffff))
     }
+    
+    public static func < (lhs: OSCTimeTag, rhs: OSCTimeTag) -> Bool {
+        lhs.date < rhs.date
+    }
+    
+    private static var OSCEpoch: Date = {
+        //midnight on January 1, 1900
+        let components = DateComponents(calendar: Calendar(identifier: .gregorian),
+                                        year: 1900,
+                                        month: 1,
+                                        day: 1,
+                                        hour: 0)
+        guard let origin = components.date else {
+            fatalError("OSC Epoch Date could not be computed")
+        }
+        
+        return origin
+    }()
+}
 
+extension OSCTimeTag: OSCDataType {
     var tag: OSCDataTypeTag { .timetag }
     
     func OSCEncoded() throws -> Data {
@@ -207,10 +213,6 @@ struct OSCTimeTag: Codable, OSCDataType, Equatable, Comparable {
         offset += 8
         return OSCTimeTag(seconds: seconds, picoseconds: picoseconds)
     }
-    
-    static func < (lhs: OSCTimeTag, rhs: OSCTimeTag) -> Bool {
-        lhs.date < rhs.date
-    }
 }
 
 public typealias OSCString = String
@@ -240,7 +242,7 @@ extension OSCString: OSCDataType {
     }
 }
 
-typealias OSCBlob = Data
+public typealias OSCBlob = Data
 extension OSCBlob: OSCDataType {
     var tag: OSCDataTypeTag { .blob }
     
@@ -265,11 +267,11 @@ extension OSCBlob: OSCDataType {
     }
 }
 
-struct OSCNull: OSCDataType {
+public struct OSCNull: OSCDataType {
     var tag: OSCDataTypeTag { .null }
 }
 
-struct OSCImpulse: OSCDataType {
+public struct OSCImpulse: OSCDataType {
     var tag: OSCDataTypeTag { .impulse }
 }
 
@@ -690,7 +692,7 @@ extension OSCMessage: OSCPacketContents {
 
 //MARK: - OSCBundle
 
-class OSCBundle {
+public class OSCBundle {
     static let kOSCBundlePrefix: Character = "#"
     static let kOSCBundleIdentifier = "#bundle"
     
@@ -811,7 +813,7 @@ extension OSCMessage: Equatable {
 }
 
 extension OSCBundle: Equatable {
-    static func == (lhs: OSCBundle, rhs: OSCBundle) -> Bool {
+    public static func == (lhs: OSCBundle, rhs: OSCBundle) -> Bool {
         guard lhs.timeTag == rhs.timeTag else {
             return false
         }

@@ -10,7 +10,7 @@ import Network
 
 //MARK: - OSCClientDelegate
 
-protocol OSCClientDelegate: AnyObject {
+public protocol OSCClientDelegate: AnyObject {
     func connectionStateChange(_ state: NWConnection.State)
 }
 
@@ -102,7 +102,7 @@ extension OSCNetworkClient {
 
 //MARK: - OSCClientUDP
 
-class OSCClientUDP: OSCNetworkClient {
+public class OSCClientUDP: OSCNetworkClient {
     internal var serviceType: String = kOSCServiceTypeUDP
     weak var delegate: OSCClientDelegate? = nil
     internal var connection: NWConnection? = nil
@@ -120,7 +120,7 @@ class OSCClientUDP: OSCNetworkClient {
 
 //MARK: - OSCClientTCP
 
-class OSCClientTCP: OSCNetworkClient {
+public class OSCClientTCP: OSCNetworkClient {
     internal var serviceType: String = kOSCServiceTypeTCP
     weak var delegate: OSCClientDelegate? = nil
     internal var connection: NWConnection? = nil
@@ -154,7 +154,7 @@ public class OSCServiceBrowser {
     internal var browser: NWBrowser?
     internal var browserTimer: Timer?
 
-    init(serviceType: String, parameters: NWParameters) {
+    public init(serviceType: String, parameters: NWParameters) {
         self.serviceType = serviceType
         self.parameters = parameters
     }
@@ -163,7 +163,7 @@ public class OSCServiceBrowser {
         stop()
     }
     
-    func start(timeout: TimeInterval?, _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
+    public func start(timeout: TimeInterval?, _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
         browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
         browser?.stateUpdateHandler = { [weak self] newState in
             switch newState {
@@ -197,7 +197,7 @@ public class OSCServiceBrowser {
         }
     }
     
-    func stop() {
+    public func stop() {
         browser?.cancel()
         stopTimer()
     }
