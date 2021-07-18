@@ -20,7 +20,7 @@ protocol OSCNetworkClient: AnyObject {
     var connection: NWConnection? { get set }
     var parameters: NWParameters { get set }
     var serviceType: String { get set }
-    var browserTimer: Timer? { get set }
+    var browser: OSCServiceBrowser? { get set }
 
     var delegate: OSCClientDelegate? { get set }
 
@@ -51,36 +51,20 @@ extension OSCNetworkClient {
     }
     
     func connect(serviceName: String, timeout: TimeInterval?) {
-        let browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
-        browser.stateUpdateHandler = { [weak self] newState in
-            switch newState {
-            case .failed(let error):
-                self?.delegate?.connectionStateChange(.failed(error))
-            default:
-                break
-            }
-        }
-        
-        browser.browseResultsChangedHandler = { [weak self] results, changes in
-            guard let match = results.firstMatch(serviceName: serviceName) else {
+        browser = OSCServiceBrowser(serviceType: serviceType, parameters: parameters)
+        browser?.start(timeout: timeout) { [weak self] results, error in
+            guard error == nil else {
+                self?.delegate?.connectionStateChange(.failed(error!))
                 return
             }
             
-            browser.cancel()
-            self?.connect(endpoint: match.endpoint)
-        }
-        
-        // Start browsing and ask for updates on the main queue.
-        browser.start(queue: .main)
-        
-        //start the browser timer if requested
-        if let timeout = timeout {
-            browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
-                browser.cancel()
-                self?.disconnect()
-                self?.delegate?.connectionStateChange(.failed(NWError.dns(DNSServiceErrorType(kDNSServiceErr_Timeout))))
+            guard let results = results,
+                  let match = results.firstMatch(serviceName: serviceName) else {
+                return
             }
-            browserTimer?.tolerance = 0.25
+            
+            self?.browser?.stop()
+            self?.connect(endpoint: match.endpoint)
         }
     }
     
@@ -102,11 +86,7 @@ extension OSCNetworkClient {
     fileprivate func setupConnection() {
         connection?.stateUpdateHandler = { [weak self] (newState) in
             switch newState {
-            case .ready:
-                self?.stopTimer()
-                
             case .cancelled, .failed:
-                self?.stopTimer()
                 self?.connection = nil
                 
             default:
@@ -117,11 +97,6 @@ extension OSCNetworkClient {
         }
         
         connection?.start(queue: .main)
-    }
-    
-    fileprivate func stopTimer() {
-        browserTimer?.invalidate()
-        browserTimer = nil
     }
 }
 
@@ -136,7 +111,7 @@ class OSCClientUDP: OSCNetworkClient {
         params.includePeerToPeer = true
         return params
     }()
-    internal var browserTimer: Timer? = nil
+    internal var browser: OSCServiceBrowser? = nil
 
     deinit {
         connection?.cancel()
@@ -164,9 +139,71 @@ class OSCClientTCP: OSCNetworkClient {
         params.defaultProtocolStack.applicationProtocols.insert(SLIPOptions, at: .zero)
         return params
     }()
-    internal var browserTimer: Timer? = nil
+    internal var browser: OSCServiceBrowser? = nil
 
     deinit {
         connection?.cancel()
+    }
+}
+
+//MARK: - OSCBrowser
+
+public class OSCServiceBrowser {
+    var serviceType: String
+    internal var parameters: NWParameters
+    internal var browser: NWBrowser?
+    internal var browserTimer: Timer?
+
+    init(serviceType: String, parameters: NWParameters) {
+        self.serviceType = serviceType
+        self.parameters = parameters
+    }
+
+    deinit {
+        stop()
+    }
+    
+    func start(timeout: TimeInterval?, _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
+        browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
+        browser?.stateUpdateHandler = { [weak self] newState in
+            switch newState {
+            case .failed(let error):
+                self?.stop()
+                updates(nil, error)
+                
+            case .cancelled:
+                self?.browser = nil
+                
+            default:
+                break
+            }
+        }
+        
+        browser?.browseResultsChangedHandler = { results, changes in
+            self.browserTimer?.invalidate()
+            updates(results, nil)
+        }
+        
+        // Start browsing and ask for updates on the main queue.
+        browser?.start(queue: .main)
+        
+        //start the browser timer if requested
+        if let timeout = timeout {
+            browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
+                self?.stop()
+                updates(nil, NWError.posix(POSIXErrorCode(rawValue: ETIMEDOUT)!))
+            }
+            browserTimer?.tolerance = 0.25
+        }
+    }
+    
+    func stop() {
+        browser?.cancel()
+        stopTimer()
+    }
+    
+    fileprivate func stopTimer() {
+        browserTimer?.invalidate()
+        browserTimer = nil
     }
 }
