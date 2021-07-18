@@ -23,15 +23,15 @@ As a user of this package you should expect to interact with the various classes
 
 ### Client usage
 
-OSCClientUDP/OSCClientTCP & OSCClientDelegate
-OSCMessage & OSCBundle
-OSCDataType Implementations
+* OSCClientUDP/OSCClientTCP & OSCClientDelegate
+* OSCMessage & OSCBundle
+* OSCDataType Implementations
 
 If you are building an OSC client. You should expect to interact primarly with with one or both of the `OSCClientUDP` and `OSCClientTCP` classes. Additionally both of these classes depend upon the `OSCClientDelegate` class for reporting network connection state change information back to the class managing the client.
 
 To begin sending messages from your client one would typically call  `client.connect()` with either a specific address and port or the name of the Bonjour service to connect to a running OSC Server.
 
-IMPORTANT: I have carried through the concept of `connect()` from the Apple Network Framework but be aware that UDP is a "connectionless" protocol and this terminology is somewhat misleading. When using a UDP client the `connect()` method simply prepares the network stack to send messages. UDP messages are sent without any validation, or even expectation, of delivery and the OSC protocol also provides no such functionality. If you require assurance of delivery (at the potential expense of slower, or even delayed, delivery) you should use the TCP protocol. If you require timely delivery, and can handle potentially loss of messages, UDP is generally more efficient.  
+*IMPORTANT*: I have carried through the concept of `connect()` from the Apple Network Framework but be aware that UDP is a "connectionless" protocol and this terminology is somewhat misleading. When using a UDP client the `connect()` method simply prepares the network stack to send messages. UDP messages are sent without any validation, or even expectation, of delivery and the OSC protocol also provides no such functionality. If you require assurance of delivery (at the potential expense of slower, or even delayed, delivery) you should use the TCP protocol. If you require timely delivery, and can handle potentially loss of messages, UDP is generally more efficient.  
 
 In order to send OSC messages via your client you would expect to use the `OSCMessage` or `OSCBundle` classes. Briefly, a message is fundamental unit of information exchange in OSC and bundles are collections of messages (and other bundles.)   
 
@@ -55,10 +55,10 @@ OSCBundle(timeTag: OSCTimeTag(immediate: true),
 
 ### Server usage
 
-OSCServerUDP/OSCServerTCP & OSCServerDelegate
-OSCMethod
-OSCMessage
-OSCDataType Implementations
+* OSCServerUDP/OSCServerTCP & OSCServerDelegate
+* OSCMethod
+* OSCMessage
+* OSCDataType Implementations
 
 If you are building an OSC server. You should expect to interact primarly with with one or both of the `OSCServerUDP` and `OSCServerTCP` classes. Additionally both of these classes depend upon the `OSCServerDelegate` class for reporting network connection state change information back to the class managing the server.
 
@@ -79,7 +79,6 @@ class MethodTest: OSCMethod {
                   "match: \(match)",
                   "method: \(addressPattern)",
                   "arguments: \(String(describing: message.arguments))")
-        expectation?.fulfill()
     }
 }
 ```
