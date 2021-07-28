@@ -112,7 +112,6 @@ Note that while useful in many instances multicast traffic tends to be depriorit
 let mcast = OSCMulticastClientServer()
 mcast.delegate = self //for group state notifications
 try mcast.connect(to: "239.123.4.5", port: 12345)
-OSCMulticastClientServer.delegate = self //for group state notifications
 
 //Begin receiving and dispatching messages to methods
 let mixerMainMute = MyMethod(address: "/mixer/main/mute1"")
