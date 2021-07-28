@@ -23,11 +23,11 @@ As a user of this package you should expect to interact with the various classes
 
 ### Client usage
 
-* OSCClientUDP/OSCClientTCP & OSCClientDelegate
+* OSCClientUDP/OSCClientTCP & OSCNetworkClientDelegate
 * OSCMessage & OSCBundle
 * OSCDataType Implementations
 
-If you are building an OSC client. You should expect to interact primarly with with one or both of the `OSCClientUDP` and `OSCClientTCP` classes. Additionally both of these classes depend upon the `OSCClientDelegate` class for reporting network connection state change information back to the class managing the client.
+If you are building an OSC client. You should expect to interact primarly with with one or both of the `OSCClientUDP` and `OSCClientTCP` classes. Additionally both of these classes depend upon the `OSCNetworkClientDelegate` class for reporting network connection state change information back to the class managing the client.
 
 To begin sending messages from your client one would typically call  `client.connect()` with either a specific address and port or the name of the Bonjour service to connect to a running OSC Server.
 
@@ -60,12 +60,12 @@ client.send(bundle)
 
 ### Server usage
 
-* OSCServerUDP/OSCServerTCP & OSCServerDelegate
+* OSCServerUDP/OSCServerTCP & OSCNetworkServerDelegate
 * OSCMethod
 * OSCMessage
 * OSCDataType Implementations
 
-If you are building an OSC server. You should expect to interact primarly with with one or both of the `OSCServerUDP` and `OSCServerTCP` classes. Additionally both of these classes depend upon the `OSCServerDelegate` class for reporting network connection state change information back to the class managing the server.
+If you are building an OSC server. You should expect to interact primarly with with one or both of the `OSCServerUDP` and `OSCServerTCP` classes. Additionally both of these classes depend upon the `OSCNetworkServerDelegate` class for reporting network connection state change information back to the class managing the server.
 
 To begin receiving messages one would typically call  `server.listen()` with a specific port and/or the name for your Bonjour service. Note that if you are using Bonjour for your client connection discovery it is advised *not* to specify a specific port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. In general it is best to not specify specific ports if possible as it adds complexity to your server setup and error handling. 
 
@@ -98,4 +98,41 @@ server.register(methods: [mixerMainMute,
                           mixerMainFader, 
                           mixerMainLabel])
 server.listen(serviceName: "MyMixer")
+```
+
+### Multicast
+
+While not specifically detailed in the OSC specfiication a number of implementations allow for multicast send and receive of OSC messages and bundles.
+
+This is implemented in OSCine as a combination Client and Server class `OSCMulticastClientServer`. `OSCMulticastClientServer` allows for simultaneous send and receive of OSC messages and bundles via a single multicast address and port. 
+
+Note that while useful in many instances multicast traffic tends to be deprioritized in many network settings and should be considered generally less reliable than unicast UDP. 
+
+```
+let mcast = OSCMulticastClientServer()
+mcast.delegate = self //for group state notifications
+try mcast.connect(to: "239.123.4.5", port: 12345)
+OSCMulticastClientServer.delegate = self //for group state notifications
+
+//Begin receiving and dispatching messages to methods
+let mixerMainMute = MyMethod(address: "/mixer/main/mute1"")
+let mixerMainSolo = MyMethod(address: "/mixer/main/solo1"")
+let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
+let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
+
+mcast.register(methods: [mixerMainMute, 
+                          mixerMainSolo, 
+                          mixerMainFader, 
+                          mixerMainLabel])
+mcast.start()
+
+//Send bundle to all in the multicast group
+let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
+                       bundleElements: [
+                           OSCMessage(address: "/mixer/*/mute*", arguments: [OSCBool(true)]), 
+                           OSCMessage(address: "/mixer/*/solo*", arguments: [OSCBool(false)]),
+                           OSCMessage(address: "/mixer/*/fader*", arguments: [OSCFloat(0.0)]), 
+                           OSCMessage(address: "/mixer/*/label*", arguments: [OSCString("")]),
+                       ])
+mcast.send(bundle)
 ```

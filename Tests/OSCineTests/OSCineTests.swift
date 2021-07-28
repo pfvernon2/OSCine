@@ -3,6 +3,8 @@ import Network
 import XCTest
 @testable import OSCine
 
+let mcastAddressEndpoint: NWEndpoint = .hostPort(host: "239.65.11.3", port: 65113)
+
 let message = OSCMessage(address: "/i/T/f/F",
                          arguments:[
                             OSCInt(1),
@@ -20,7 +22,8 @@ let SLIPDatagram = Data([10, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_END.rawValue,
                          30, 31, 32, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_END.rawValue, SLIPCodes.END.rawValue])
 
 let OSCTestServiceName = "OSCine_Test"
-var testBundle: OSCBundle = {
+
+var testMessages: [OSCMessage] = {
     let message1 = OSCMessage(address: "/test/mixer/*/knob[0-9]",
                               arguments: [OSCFloat(0.75)])
     
@@ -39,8 +42,23 @@ var testBundle: OSCBundle = {
     let message6 = OSCMessage(address: "//blob",
                               arguments: [OSCBlob(datagram)])
 
+    return [message1, message2, message3, message4, message5, message6]
+}()
+
+var testBundle: OSCBundle = {
     return OSCBundle(timeTag: OSCTimeTag(immediate: true),
-                     bundleElements: [message1, message2, message3, message4, message5, message6])
+                     bundleElements: testMessages)
+}()
+
+var testMethods: [MethodTest] = {
+    var result = [MethodTest](capacity: 5)
+    result.append(MethodTest(address: "/test/mixer/1/knob8"))
+    result.append(MethodTest(address: "/test/mixer/1/slider1"))
+    result.append(MethodTest(address: "/test/mixer/1/button3"))
+    result.append(MethodTest(address: "/test/mixer/1/label1"))
+    result.append(MethodTest(address: "/test/mixer/1/master/eq1/lowShelf"))
+    result.append(MethodTest(address: "/test/mixer/1/blob/data"))
+    return result
 }()
 
 final class OSCineTests: XCTestCase {
@@ -193,9 +211,81 @@ final class OSCineTests: XCTestCase {
         
         server.server.cancel()
    }
+    
+    let mcast = MulticastTest()
+    func testMulticast() {
+        testPrint("Starting Multicast Test")
+
+        let exp = expectation(description: "\(#function)")
+        exp.expectedFulfillmentCount = testMessages.count * 2
+
+        mcast.runTest(expectation: exp)
+        
+        wait(for: [exp], timeout: 30.0, enforceOrder: false)
+    }
 }
 
-class ClientTest: OSCClientDelegate {
+class MulticastTest: OSCMulticastClientServerDelegate {
+    var expectation: XCTestExpectation? = nil
+    lazy var mcast: OSCMulticastClientServer = {
+        let mcast = OSCMulticastClientServer()
+        mcast.delegate = self
+        return mcast
+    }()
+
+    func groupStateChange(state: NWConnectionGroup.State) {
+        testPrint("state: \(state)")
+
+        switch state {
+        case .ready:
+            send()
+
+        case .failed(let error):
+            XCTFail(error.localizedDescription)
+
+        default:
+            break
+        }
+    }
+    
+    func runTest(expectation: XCTestExpectation) {
+        self.expectation = expectation
+        
+        do {
+            try mcast.connect(to: "224.0.0.251", port: 12345) //239.123.4.5
+
+            //add expectation to methods and register
+            testMethods.forEach {
+                $0.expectation = expectation
+            }
+            try mcast.register(methods: testMethods)
+
+            try mcast.start()
+            testPrint("Multicast Test Started")
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+    
+    func send() {
+        do {
+            //send messages serially to test queueing
+            try testMessages.forEach {
+                testPrint("Sending multicast message: \(String(describing: $0.addressPattern))")
+                try mcast.send($0) { error in
+                    if let error = error {
+                        XCTFail(error.localizedDescription)
+                    }
+                    self.expectation?.fulfill()
+                }
+            }
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+}
+
+class ClientTest: OSCNetworkClientDelegate {
     lazy var udpClient: OSCClientUDP = {
         let client = OSCClientUDP()
         client.delegate = self
@@ -223,7 +313,7 @@ class ClientTest: OSCClientDelegate {
         client.connect(serviceName: OSCTestServiceName, timeout: 10.0)
     }
     
-    //OSCClientDelegate
+    //OSCNetworkClientDelegate
     func connectionStateChange(_ state: NWConnection.State) {
         switch state {
         case .failed(let error):
@@ -254,6 +344,48 @@ class ClientTest: OSCClientDelegate {
     }
 }
 
+class ServerTest: OSCNetworkServerDelegate {
+    lazy var udpServer: OSCServerUDP = {
+        let server = OSCServerUDP()
+        server.delegate = self
+        return server
+    }()
+    lazy var tcpServer: OSCServerTCP = {
+        let server = OSCServerTCP()
+        server.delegate = self
+        return server
+    }()
+    
+    var useTCP: Bool = false
+    var server: OSCNetworkServer {
+        useTCP ? tcpServer : udpServer
+    }
+    
+    func listenerStateChange(state: NWListener.State) {
+        testPrint("Server listener state change: \(state)")
+    }
+
+    func runTest(expectation: XCTestExpectation, useTCP: Bool = false) {
+        self.useTCP = useTCP
+        do {
+            //set expectation on methods
+            testMethods.forEach {
+                $0.expectation = expectation
+            }
+            
+            //Register methods on server
+            try server.register(methods: testMethods)
+            
+            //start listening
+            try server.listen(serviceName: OSCTestServiceName)
+        } catch {
+            testPrint("Server startup failed:", error, prefix: String.boom)
+            XCTFail(error.localizedDescription)
+            expectation.fulfillAll()
+        }
+    }
+}
+
 class MethodTest: OSCMethod {
     var addressPattern: OSCAddressPattern
     var expectation: XCTestExpectation? = nil
@@ -271,67 +403,15 @@ class MethodTest: OSCMethod {
     }
 }
 
-class ServerTest: OSCServerDelegate {
-    lazy var udpServer: OSCServerUDP = {
-        let server = OSCServerUDP()
-        server.delegate = self
-        return server
-    }()
-    lazy var tcpServer: OSCServerTCP = {
-        let server = OSCServerTCP()
-        server.delegate = self
-        return server
-    }()
-    
-    var useTCP: Bool = false
-    var server: OSCNetworkServer {
-        useTCP ? tcpServer : udpServer
-    }
-
-    lazy var methods: [MethodTest] = {
-        var result = [MethodTest](capacity: 5)
-        result.append(MethodTest(address: "/test/mixer/1/knob8"))
-        result.append(MethodTest(address: "/test/mixer/1/slider1"))
-        result.append(MethodTest(address: "/test/mixer/1/button3"))
-        result.append(MethodTest(address: "/test/mixer/1/label1"))
-        result.append(MethodTest(address: "/test/mixer/1/master/eq1/lowShelf"))
-        result.append(MethodTest(address: "/test/mixer/1/blob/data"))
-        return result
-    }()
-    
-    func listenerStateChange(state: NWListener.State) {
-        testPrint("Server listener state change: \(state)")
-    }
-
-    func runTest(expectation: XCTestExpectation, useTCP: Bool = false) {
-        self.useTCP = useTCP
-        do {
-            //set expectation on methods
-            methods.forEach {
-                $0.expectation = expectation
-            }
-            
-            //Register methods on server
-            try server.register(methods: methods)
-            
-            //start listening
-            try server.listen(serviceName: OSCTestServiceName)
-        } catch {
-            testPrint("Server startup failed:", error, prefix: String.boom)
-            XCTFail(error.localizedDescription)
-            expectation.fulfillAll()
-        }
-    }
-}
-
 //MARK: - Utility
 
-func testPrint(_ items: Any..., separator: String = .comma, terminator: String = .newline, prefix: String = String.test) {
+func testPrint(_ items: Any...,
+               separator: String = .comma,
+               terminator: String = .newline,
+               prefix: String = String.test) {
     print(prefix, terminator: .space)
-    items.forEach {
-        print($0, terminator: separator)
-    }
-    print(String.empty)
+    print(items.map {"\($0)"}.joined(separator: separator),
+          terminator: terminator)
 }
 
 fileprivate extension Data {
@@ -361,7 +441,6 @@ public extension String {
     static var notice: String { "⚠️" }
     static var warning: String { "🚧" }
     static var fatal: String { "☢️" }
-    
     static var reentry: String { "⛔️" }
     static var stop: String { "🛑" }
     static var boom: String { "💥" }
