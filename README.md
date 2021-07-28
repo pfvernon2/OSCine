@@ -27,11 +27,11 @@ As a user of this package you should expect to interact with the various classes
 * OSCMessage & OSCBundle
 * OSCDataType Implementations
 
-If you are building an OSC client. You should expect to interact primarly with with one or both of the `OSCClientUDP` and `OSCClientTCP` classes. Additionally both of these classes depend upon the `OSCNetworkClientDelegate` class for reporting network connection state change information back to the class managing the client.
+If you are building an OSC client. You should expect to interact primarly with with one or both of the `OSCClientUDP` and `OSCClientTCP` classes. Additionally both of these classes depend upon the `OSCNetworkClientDelegate` class for reporting network state change information back to the class managing the client.
 
 To begin sending messages from your client one would typically call  `client.connect()` with either a specific address and port or the name of the Bonjour service to connect to a running OSC Server.
 
-*IMPORTANT*: I have carried through the concept of `connect()` from the Apple Network Framework but be aware that UDP is a "connectionless" protocol and this terminology is potentially misleading. When using a UDP client the `connect()` method simply prepares the network stack to send messages. UDP messages are sent without any expectation or confirmation of delivery and the OSC protocol also provides no such functionality. If you require assurance of delivery (at the potential expense of slower, or even delayed, delivery) you should use the TCP protocol. If you require timely delivery, and can handle the potential loss of messages, UDP is generally more efficient.  
+*IMPORTANT*: I have carried through the concept of `connect()` from the Apple Network Framework but be aware that UDP is a "connectionless" protocol and this terminology is potentially misleading. When using a UDP client the `connect()` method simply prepares the network stack to send datagrams. UDP datagrams are sent without any expectation, or confirmation, of delivery and the OSC protocol provides no additional functionality. If you require assurance of delivery (at the potential expense of slower, or even delayed, delivery) you should use the TCP protocol. If you require timely delivery, and can handle the potential loss of datagrams, UDP is generally more efficient.  
 
 In order to send OSC messages via your client use the `OSCMessage` and/or `OSCBundle` classes. A message is fundamental unit of information exchange in OSC and bundles are collections of messages (and other bundles.) 
 
@@ -65,9 +65,9 @@ client.send(bundle)
 * OSCMessage
 * OSCDataType Implementations
 
-If you are building an OSC server. You should expect to interact primarly with with one or both of the `OSCServerUDP` and `OSCServerTCP` classes. Additionally both of these classes depend upon the `OSCNetworkServerDelegate` class for reporting network connection state change information back to the class managing the server.
+If you are building an OSC server you should expect to interact primarly with with one or both of the `OSCServerUDP` and `OSCServerTCP` classes. Additionally both of these classes depend upon the `OSCNetworkServerDelegate` class for reporting network state change information back to the class managing the server.
 
-To begin receiving messages one would typically call  `server.listen()` with a specific port and/or the name for your Bonjour service. Note that if you are using Bonjour for your client connection discovery it is advised *not* to specify a specific port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. In general it is best to not specify specific ports if possible as it adds complexity to your server setup and error handling. 
+To begin receiving messages one would typically call  `server.listen()` with a specific port and/or the name for your Bonjour service. Note that if you are using Bonjour for your client connection discovery it is advised *not* to specify a specific port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. In general it is best to not specify ports if possible as it adds complexity to your server setup and error handling. 
 
 In order to receive OSC messages you will need to register one or more `OSCMethod` classes on your server instance. To implement a method you will need to provide an `OSCAddressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when a match for the specified `OSCAddressPattern` is received. Unlike client messages which may specify wildcards your `OSCAddressPattern` must be a valid and fully qualified OSC Address Pattern. 
 
