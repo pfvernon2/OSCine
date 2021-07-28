@@ -8,9 +8,9 @@
 import Foundation
 import Network
 
-//MARK: - OSCClientDelegate
+//MARK: - OSCNetworkClientDelegate
 
-public protocol OSCClientDelegate: AnyObject {
+public protocol OSCNetworkClientDelegate: AnyObject {
     func connectionStateChange(_ state: NWConnection.State)
 }
 
@@ -22,10 +22,10 @@ protocol OSCNetworkClient: AnyObject {
     var serviceType: String { get set }
     var browser: OSCServiceBrowser? { get set }
 
-    var delegate: OSCClientDelegate? { get set }
+    var delegate: OSCNetworkClientDelegate? { get set }
 
     func connect(endpoint: NWEndpoint)
-    func connect(host: String, port: UInt16) throws
+    func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
     func connect(serviceName: String, timeout: TimeInterval?)
     
     func disconnect()
@@ -39,21 +39,16 @@ extension OSCNetworkClient {
         setupConnection()
     }
     
-    func connect(host: String, port: UInt16) throws {
-        guard let port = NWEndpoint.Port(String(port)) else {
-            throw OSCNetworkingError.invalidNetworkDesignation
-        }
-        
-        connection = NWConnection(host: NWEndpoint.Host(host),
-                                  port: port,
-                                  using: parameters)
-        setupConnection()
+    func connect(host: NWEndpoint.Host, port: NWEndpoint.Port) {
+        let endpoint = NWEndpoint.hostPort(host: host, port: port)
+        connect(endpoint: endpoint)
     }
     
     func connect(serviceName: String, timeout: TimeInterval?) {
         browser = OSCServiceBrowser(serviceType: serviceType, parameters: parameters)
         browser?.start(timeout: timeout) { [weak self] results, error in
             guard error == nil else {
+                self?.browser?.cancel()
                 self?.delegate?.connectionStateChange(.failed(error!))
                 return
             }
@@ -63,7 +58,7 @@ extension OSCNetworkClient {
                 return
             }
             
-            self?.browser?.stop()
+            self?.browser?.cancel()
             self?.connect(endpoint: match.endpoint)
         }
     }
@@ -84,19 +79,27 @@ extension OSCNetworkClient {
     }
     
     fileprivate func setupConnection() {
-        connection?.stateUpdateHandler = { [weak self] (newState) in
-            switch newState {
-            case .cancelled, .failed:
+        guard let connection = connection else {
+            return
+        }
+        
+        connection.stateUpdateHandler = { [weak self] (state) in
+            switch state {
+            case .failed(let error):
+                OSCNetworkLogger.debug("\(connection.debugDescription) failed: \(error.debugDescription)")
+                fallthrough
+            case .cancelled:
                 self?.connection = nil
                 
             default:
                 break
             }
             
-            self?.delegate?.connectionStateChange(newState)
+            self?.delegate?.connectionStateChange(state)
         }
         
-        connection?.start(queue: .main)
+        OSCNetworkLogger.debug("Starting connection to: \(connection.debugDescription)")
+        connection.start(queue: .main)
     }
 }
 
@@ -104,7 +107,7 @@ extension OSCNetworkClient {
 
 public class OSCClientUDP: OSCNetworkClient {
     internal var serviceType: String = kOSCServiceTypeUDP
-    weak var delegate: OSCClientDelegate? = nil
+    weak var delegate: OSCNetworkClientDelegate? = nil
     internal var connection: NWConnection? = nil
     internal var parameters: NWParameters = {
         var params: NWParameters = .udp
@@ -122,7 +125,7 @@ public class OSCClientUDP: OSCNetworkClient {
 
 public class OSCClientTCP: OSCNetworkClient {
     internal var serviceType: String = kOSCServiceTypeTCP
-    weak var delegate: OSCClientDelegate? = nil
+    weak var delegate: OSCNetworkClientDelegate? = nil
     internal var connection: NWConnection? = nil
     internal var parameters: NWParameters = {
         // Customize TCP options to enable keepalives.
@@ -160,20 +163,23 @@ public class OSCServiceBrowser {
     }
 
     deinit {
-        stop()
+        cancel()
     }
     
-    public func start(timeout: TimeInterval?, _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
+    public func start(timeout: TimeInterval? = nil,
+                      _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
         browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
         browser?.stateUpdateHandler = { [weak self] newState in
             switch newState {
             case .failed(let error):
-                self?.stop()
+                OSCNetworkLogger.debug("Browser failed: \(error.localizedDescription)")
+                self?.cancel()
                 updates(nil, error)
                 
             case .cancelled:
                 self?.browser = nil
-                
+                self?.cancel()
+
             default:
                 break
             }
@@ -185,25 +191,38 @@ public class OSCServiceBrowser {
         }
         
         // Start browsing and ask for updates on the main queue.
+        OSCNetworkLogger.debug("Starting browser for: \(self.browser?.debugDescription ?? "?")")
         browser?.start(queue: .main)
         
         //start the browser timer if requested
         if let timeout = timeout {
             browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
-                self?.stop()
+                self?.cancel()
                 updates(nil, NWError.posix(POSIXErrorCode(rawValue: ETIMEDOUT)!))
             }
             browserTimer?.tolerance = 0.25
         }
     }
     
-    public func stop() {
+    public func cancel() {
         browser?.cancel()
-        stopTimer()
-    }
-    
-    fileprivate func stopTimer() {
         browserTimer?.invalidate()
         browserTimer = nil
+    }
+}
+
+//MARK: - NWBrowserResultSet
+
+typealias NWBrowserResultSet = Set<NWBrowser.Result>
+extension NWBrowserResultSet {
+    //Utility to return first instance of service matching service name
+    func firstMatch(serviceName: String) -> NWBrowser.Result? {
+        first {
+            guard case let NWEndpoint.service(name: name, type: _, domain: _, interface: _) = $0.endpoint else {
+                return false
+            }
+            
+            return name == serviceName
+        }
     }
 }

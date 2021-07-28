@@ -18,9 +18,9 @@ public enum OSCNetworkingError: Error {
     case notConnected
 }
 
-//MARK: - OSCServerDelegate
+//MARK: - OSCNetworkServerDelegate
 
-public protocol OSCServerDelegate: AnyObject {
+public protocol OSCNetworkServerDelegate: AnyObject {
     func listenerStateChange(state: NWListener.State)
 }
 
@@ -28,10 +28,10 @@ public protocol OSCServerDelegate: AnyObject {
 
 protocol OSCNetworkServer: AnyObject {
     var serviceType: String { get set }
-    var delegate: OSCServerDelegate? { get set }
+    var delegate: OSCNetworkServerDelegate? { get set }
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
-    var manager: OSCServerConnectionManager { get }
+    var manager: OSCConnectionManager { get set }
     
     func listen(on port: NWEndpoint.Port, serviceName: String?) throws
     func cancel()
@@ -50,20 +50,29 @@ extension OSCNetworkServer {
         if let serviceName = serviceName {
             listener?.service = NWListener.Service(name: serviceName, type: serviceType)
         }
-
+        
         listener?.stateUpdateHandler = { [weak self] (state) in
-            if state == .cancelled {
+            switch state {
+            case .failed(let error):
+                OSCNetworkLogger.debug("Listener failed: \(error.debugDescription)")
+                fallthrough
+            case .cancelled:
                 self?.manager.cancelAll()
                 self?.listener = nil
+                
+            default:
+                break
             }
             
             self?.delegate?.listenerStateChange(state: state)
         }
         
         listener?.newConnectionHandler = { [weak self] (connection) in
+            OSCNetworkLogger.debug("Received connection from: \(connection.debugDescription)")
             self?.manager.add(connection: connection)
         }
         
+        OSCNetworkLogger.debug("Starting listener: \(self.listener?.debugDescription ?? "?")")
         listener?.start(queue: .main)
     }
     
@@ -97,26 +106,28 @@ extension OSCNetworkServer {
 //MARK: - OSCServerUDP
 
 public class OSCServerUDP: OSCNetworkServer {
-    var serviceType: String = kOSCServiceTypeUDP
-    weak var delegate: OSCServerDelegate? = nil
+    weak var delegate: OSCNetworkServerDelegate? = nil
+
+    internal var serviceType: String = kOSCServiceTypeUDP
     internal var listener: NWListener? = nil
     internal var parameters: NWParameters = {
         var params: NWParameters = NWParameters(dtls: nil, udp: NWProtocolUDP.Options())
         params.includePeerToPeer = true
         return params
     }()
-    internal var manager = OSCServerConnectionManager()
-    
+    internal var manager: OSCConnectionManager = OSCConnectionManager()
+
     deinit {
-        listener?.cancel()
+        cancel()
     }
 }
 
 //MARK: - OSCServerTCP
 
 public class OSCServerTCP: OSCNetworkServer {
-    var serviceType: String = kOSCServiceTypeTCP
-    weak var delegate: OSCServerDelegate? = nil
+    weak var delegate: OSCNetworkServerDelegate? = nil
+
+    internal var serviceType: String = kOSCServiceTypeTCP
     internal var listener: NWListener? = nil
     internal var parameters: NWParameters = {
         //Customize TCP options to enable keepalives
@@ -134,34 +145,39 @@ public class OSCServerTCP: OSCNetworkServer {
         params.defaultProtocolStack.applicationProtocols.insert(SLIPOptions, at: .zero)
         return params
     }()
-    internal var manager = OSCServerConnectionManager()
+    internal var manager: OSCConnectionManager = OSCConnectionManager()
     
     deinit {
-        listener?.cancel()
+        cancel()
     }
 }
 
 //MARK: - OSCConnectionManager
 
-internal typealias NWConnectionArray = Array<NWConnection>
-internal class OSCServerConnectionManager {
+internal class OSCConnectionManager {
     var addressSpace = OSCAddressSpace()
-    var connections = NWConnectionArray()
-    
+    var connections = Array<NWConnection>()
+
     func add(connection: NWConnection) {
         connections.append(connection)
         
-        connection.stateUpdateHandler = { [weak self] (newState) in
-            switch newState {
+        connection.stateUpdateHandler = { [weak self] (state) in
+            switch state {
             case .ready:
                 self?.receiveNextMessage(connection: connection)
-            case .cancelled, .failed(_):
+                
+            case .failed(let error):
+                OSCNetworkLogger.debug("\(connection.debugDescription) failed: \(error.debugDescription)")
+                fallthrough
+            case .cancelled:
                 self?.remove(connection: connection)
+                
             default:
                 break
             }
         }
         
+        OSCNetworkLogger.debug("Starting connection from: \(connection.debugDescription)")
         connection.start(queue: .main)
     }
     
@@ -172,15 +188,16 @@ internal class OSCServerConnectionManager {
     func receiveNextMessage(connection: NWConnection) {
         connection.receiveMessage { [weak self] (content, context, isComplete, error) in
             guard error == nil else {
+                OSCNetworkLogger.error("receiveMessage failure: \(error!.localizedDescription)")
                 return
             }
-            
+
             if isComplete, let content = content {
                 do {
                     let packet = try OSCPacketFactory.decodeOSCPacket(packet: content)
                     self?.addressSpace.dispatch(packet: packet)
                 } catch {
-                    //TODO: Error handling, report to server delegate? 
+                    OSCNetworkLogger.error("OSCPacket decode failure: \(error.localizedDescription)")
                 }
             }
             
@@ -192,4 +209,3 @@ internal class OSCServerConnectionManager {
         connections.forEach { $0.cancel() }
     }
 }
-

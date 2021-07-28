@@ -584,7 +584,7 @@ struct OSCPacketFactory {
 }
 
 //Protocol defining basic OSCPacket contents and operations on the contents
-protocol OSCPacketContents {
+protocol OSCPacketContents: AnyObject {
     func createPacket() throws -> OSCPacket
     func parsePacket(packet: OSCPacket) throws
 }
@@ -984,6 +984,10 @@ internal extension OSCAddressSpace {
     }
     
     func dispatch(packet: OSCPacketContents) {
+        guard !isEmpty else {
+            return
+        }
+        
         switch packet {
         case let message as OSCMessage:
             dispatch(message: message)
@@ -1002,7 +1006,8 @@ internal extension OSCAddressSpace {
         guard let pattern = message.addressPattern else {
             return
         }
-                
+        
+        //TODO: This is an obvious spot to add concurrency, maybe in Swift 5.5
         methodsMatching(pattern: pattern).forEach {
             $1.handleMessage(message, for: $0)
         }

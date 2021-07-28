@@ -8,7 +8,6 @@
 
 import Foundation
 import Network
-import OSLog
 
 //MARK: - Definitions
 
@@ -133,11 +132,6 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     static let definition = NWProtocolFramer.Definition(implementation: SLIPProtocol.self)
     static var label: String { "SLIP" }
     
-    static var logger: Logger = {
-        Logger(subsystem: "com.cyberdev.OSCine",
-               category: "network")
-    }()
-
     required init(framer: NWProtocolFramer.Instance) {}
     
     func start(framer: NWProtocolFramer.Instance) -> NWProtocolFramer.StartResult { .ready }
@@ -166,7 +160,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                     let datagram = Data(buffer[buffer.startIndex...datagramTerminator])
                     parsedDatagram = try datagram.SLIPDecoded()
                 } catch {
-                    SLIPProtocol.logger.error("SLIPProtocol message decode failure: \(error.localizedDescription)")
+                    OSCNetworkLogger.error("SLIPProtocol message decode failure: \(error.localizedDescription)")
                 }
                 
                 //even if we fail parsing return data as consumed since we can't process it
@@ -225,7 +219,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         return .zero
                     }
                 } catch {
-                    SLIPProtocol.logger.error("SLIPProtocol message encode failure: \(error.localizedDescription)")
+                    OSCNetworkLogger.error("SLIPProtocol message encode failure: \(error.localizedDescription)")
                     return .zero
                 }
             }

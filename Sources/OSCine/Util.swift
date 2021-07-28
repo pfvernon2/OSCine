@@ -7,10 +7,18 @@
 
 import Foundation
 import Network
+import OSLog
+
+//MARK: - Logging
+
+internal var OSCNetworkLogger: Logger = {
+    Logger(subsystem: "com.cyberdev.OSCine",
+           category: "network")
+}()
 
 //MARK: - Data Padding
 
-//Data extension to pad byte counts as required by OSC
+//Data extension to add padding as required by OSC
 extension Data {
     //All OSC data is zero padded modulo 4 bytes
     fileprivate static let kOSCPadValue: UInt8 = 0
@@ -53,22 +61,6 @@ extension Data {
     }
 }
 
-//MARK: - NWBrowserResultSet
-
-typealias NWBrowserResultSet = Set<NWBrowser.Result>
-extension NWBrowserResultSet {
-    //Utility to return first instance of service matching service name
-    func firstMatch(serviceName: String) -> NWBrowser.Result? {
-        first {
-            guard case let NWEndpoint.service(name: name, type: _, domain: _, interface: _) = $0.endpoint else {
-                return false
-            }
-            
-            return name == serviceName
-        }
-    }
-}
-
 //MARK: - Array
 
 extension Array {
@@ -79,3 +71,10 @@ extension Array {
     }
 }
 
+//MARK: - NWProtocolUDP
+
+extension NWProtocolUDP {
+    static var maxDatagramSize: Int = {
+        65507 //IPv4
+    }()
+}
