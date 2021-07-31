@@ -588,8 +588,8 @@ protocol OSCPacketContents: AnyObject {
 //MARK: - OSCMessage
 
 public class OSCMessage {
-    var addressPattern: OSCAddressPattern? = nil
-    var arguments: OSCArgumentArray? = nil
+    public var addressPattern: OSCAddressPattern? = nil
+    public var arguments: OSCArgumentArray? = nil
     var argumentTypes: OSCTypeTagArray? {
         arguments?.typeTags()
     }
