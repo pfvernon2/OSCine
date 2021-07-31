@@ -53,9 +53,13 @@ extension OSCDataTypeTag {
     }
 }
 
-//MARK: - OSCDataType Protocol
+//MARK: - OSCType Protocol
 
-//Protocol for specifying OSC Data Types
+//Public protocol specifying OSC Types
+public protocol OSCType {
+}
+
+//Internal Protocol for specifying OSC Data Types
 protocol OSCDataType {
     var tag: OSCDataTypeTag { get }
 
@@ -78,6 +82,8 @@ extension OSCDataType {
 
 //OSC Data Types
 public typealias OSCInt = Int32
+extension OSCInt: OSCType {
+}
 extension OSCInt: OSCDataType {
     var tag: OSCDataTypeTag { .int }
     
@@ -101,6 +107,8 @@ extension OSCInt: OSCDataType {
 }
 
 public typealias OSCFloat = Float32
+extension OSCFloat: OSCType {
+}
 extension OSCFloat: OSCDataType {
     var tag: OSCDataTypeTag { .float }
     
@@ -130,6 +138,8 @@ extension OSCFloat: OSCDataType {
 }
 
 public typealias OSCBool = Bool
+extension OSCBool: OSCType {
+}
 extension OSCBool: OSCDataType {
     var tag: OSCDataTypeTag { self ? .true : .false }
 }
@@ -182,7 +192,8 @@ public struct OSCTimeTag: Codable, Equatable, Comparable {
         return origin
     }()
 }
-
+extension OSCTimeTag: OSCType {
+}
 extension OSCTimeTag: OSCDataType {
     var tag: OSCDataTypeTag { .timetag }
     
@@ -219,6 +230,8 @@ extension OSCTimeTag: OSCDataType {
 }
 
 public typealias OSCString = String
+extension OSCString: OSCType {
+}
 extension OSCString: OSCDataType {
     var tag: OSCDataTypeTag { .string }
     
@@ -246,6 +259,8 @@ extension OSCString: OSCDataType {
 }
 
 public typealias OSCBlob = Data
+extension OSCBlob: OSCType {
+}
 extension OSCBlob: OSCDataType {
     var tag: OSCDataTypeTag { .blob }
     
@@ -273,13 +288,13 @@ extension OSCBlob: OSCDataType {
     }
 }
 
-public struct OSCNull: OSCDataType {
+public struct OSCNull: OSCType, OSCDataType {
     typealias OSCType = OSCNull
 
     var tag: OSCDataTypeTag { .null }
 }
 
-public struct OSCImpulse: OSCDataType {
+public struct OSCImpulse: OSCType, OSCDataType {
     typealias OSCType = OSCImpulse
 
     var tag: OSCDataTypeTag { .impulse }
@@ -591,7 +606,7 @@ public class OSCMessage {
         try parsePacket(packet: packet)
     }
     
-    func appendArgument(_ arg: OSCDataType) {
+    func appendArgument(_ arg: OSCType) {
         if arguments == nil {
             arguments = OSCArgumentArray()
         }
@@ -641,16 +656,16 @@ extension OSCMessage: OSCPacketContents {
         try types.forEach { type in
             switch type {
             case .int:
-                let int = try OSCInt.OSCDecoded(data: tagData, at: &currPos)
+                let int = try OSCInt.OSCDecoded(data: tagData, at: &currPos) as! OSCInt
                 argArray.append(int)
             case .float:
-                let float = try OSCFloat.OSCDecoded(data: tagData, at: &currPos)
+                let float = try OSCFloat.OSCDecoded(data: tagData, at: &currPos) as! OSCFloat
                 argArray.append(float)
             case .string:
-                let string = try OSCString.OSCDecoded(data: tagData, at: &currPos)
+                let string = try OSCString.OSCDecoded(data: tagData, at: &currPos) as! OSCString
                 argArray.append(string)
             case .blob:
-                let blob = try OSCBlob.OSCDecoded(data: tagData, at: &currPos)
+                let blob = try OSCBlob.OSCDecoded(data: tagData, at: &currPos) as! OSCBlob
                 argArray.append(blob)
             case .true:
                 argArray.append(OSCBool(true))
@@ -661,7 +676,7 @@ extension OSCMessage: OSCPacketContents {
             case .impulse:
                 argArray.append(OSCImpulse())
             case .timetag:
-                let timetag = try OSCTimeTag.OSCDecoded(data: tagData, at: &currPos)
+                let timetag = try OSCTimeTag.OSCDecoded(data: tagData, at: &currPos) as! OSCTimeTag
                 argArray.append(timetag)
             }
         }
@@ -866,29 +881,37 @@ extension OSCTypeTagArray {
 
 //MARK: - OSCArgumentArray
 
-typealias OSCArgumentArray = Array<OSCDataType>
+public typealias OSCArgumentArray = Array<OSCType>
 extension OSCArgumentArray {
     func typeTags() -> OSCTypeTagArray {
         reduce(into: OSCTypeTagArray(capacity: count)) {
-            $0.append($1.tag)
+            guard let type = $1 as? OSCDataType else {
+                return
+            }
+            $0.append(type.tag)
         }
     }
     
     func OSCEncoded() throws -> Data {
         try reduce(into: Data(capacity: count)) {
-            $0.append(try $1.OSCEncoded())
+            guard let type = $1 as? OSCDataType else {
+                return
+            }
+            $0.append(try type.OSCEncoded())
         }
     }
     
     static func == (lhs: OSCArgumentArray, rhs: OSCArgumentArray) -> Bool {
         lhs.elementsEqual(rhs) {
-            guard $0.tag == $1.tag else {
+            guard let lhs = $0 as? OSCDataType,
+                  let rhs = $1 as? OSCDataType,
+                  lhs.tag == rhs.tag else {
                 return false
             }
             
             do {
-                let left = try $0.OSCEncoded()
-                let right = try $1.OSCEncoded()
+                let left = try lhs.OSCEncoded()
+                let right = try rhs.OSCEncoded()
                 return left == right
             } catch {
                 return false
