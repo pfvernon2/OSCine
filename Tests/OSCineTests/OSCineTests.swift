@@ -14,12 +14,12 @@ let message = OSCMessage(address: "/i/T/f/F",
                          ])
 let messageHex = "2F692F542F662F46000000002C695466460000000000000140000000"
 
-let datagram = Data([10, SLIPCodes.END.rawValue,
-                     20, 21, SLIPCodes.ESC.rawValue, SLIPCodes.ESC.rawValue,
-                     30, 31, 32, SLIPCodes.END.rawValue])
-let SLIPDatagram = Data([10, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_END.rawValue,
-                         20, 21, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_ESC.rawValue, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_ESC.rawValue,
-                         30, 31, 32, SLIPCodes.ESC.rawValue, SLIPCodes.ESC_END.rawValue, SLIPCodes.END.rawValue])
+let datagram = Data([10, SLIPEscapeCodes.END.rawValue,
+                     20, 21, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC.rawValue,
+                     30, 31, 32, SLIPEscapeCodes.END.rawValue])
+let SLIPDatagram = Data([10, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC_END.rawValue,
+                         20, 21, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC_ESC.rawValue, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC_ESC.rawValue,
+                         30, 31, 32, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC_END.rawValue, SLIPEscapeCodes.END.rawValue])
 
 let OSCTestServiceName = "OSCine_Test"
 
@@ -46,7 +46,7 @@ var testMessages: [OSCMessage] = {
 }()
 
 var testBundle: OSCBundle = {
-    return OSCBundle(timeTag: OSCTimeTag(immediate: true),
+    return OSCBundle(timeTag: OSCTimeTag.immediate,
                      bundleElements: testMessages)
 }()
 
@@ -285,7 +285,7 @@ class MulticastTest: OSCMulticastClientServerDelegate {
     }
 }
 
-class ClientTest: OSCNetworkClientDelegate {
+class ClientTest: OSCClientDelegate {
     lazy var udpClient: OSCClientUDP = {
         let client = OSCClientUDP()
         client.delegate = self
@@ -313,7 +313,7 @@ class ClientTest: OSCNetworkClientDelegate {
         client.connect(serviceName: OSCTestServiceName, timeout: 10.0)
     }
     
-    //OSCNetworkClientDelegate
+    //OSCClientDelegate
     func connectionStateChange(_ state: NWConnection.State) {
         switch state {
         case .failed(let error):
@@ -344,7 +344,7 @@ class ClientTest: OSCNetworkClientDelegate {
     }
 }
 
-class ServerTest: OSCNetworkServerDelegate {
+class ServerTest: OSCServerDelegate {
     lazy var udpServer: OSCServerUDP = {
         let server = OSCServerUDP()
         server.delegate = self

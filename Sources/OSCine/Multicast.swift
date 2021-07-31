@@ -10,6 +10,7 @@ import Network
 
 //MARK: - OSCMulticastClientServerDelegate
 
+///Delegate for notifications of network state change of the mulitcast client server
 public protocol OSCMulticastClientServerDelegate: AnyObject {
     func groupStateChange(state: NWConnectionGroup.State)
 }
@@ -74,8 +75,7 @@ public class OSCMulticastClientServer {
 
         group.setReceiveHandler(maximumMessageSize: NWProtocolUDP.maxDatagramSize,
                                  rejectOversizedMessages: true) { [weak self] (message, content, isComplete) in
-            if isComplete, let content = content,
-               let packet = try? OSCPacketFactory.decodeOSCPacket(packet: content) {
+            if isComplete, let content = content, let packet = try? content.parseOSCPacket() {
                 self?.manager.addressSpace.dispatch(packet: packet)
             } else if let connection = message.extractConnection() {
                 self?.manager.add(connection: connection)
@@ -103,17 +103,11 @@ public class OSCMulticastClientServer {
     }
 
     func register(methods: [OSCMethod]) throws {
-        try methods.forEach {
-            try register(method: $0)
-        }
+        try manager.addressSpace.register(methods: methods)
     }
     
     func register(method: OSCMethod) throws {
-        guard method.addressPattern.isValidOSCAddress() else {
-            throw OSCEncodingError.invalidAddress
-        }
-        
-        manager.addressSpace.register(method: method)
+        try manager.addressSpace.register(method: method)
     }
 
     func deregister(method: OSCMethod) {
@@ -131,9 +125,4 @@ public class OSCMulticastClientServer {
     deinit {
         cancel()
     }
-}
-
-
-public class OSCUDPClientServer {
-    
 }

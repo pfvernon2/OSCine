@@ -9,6 +9,16 @@ import Foundation
 import Network
 import OSLog
 
+//MARK: - Definitions
+
+public let kOSCServiceTypeUDP: String = "_osc._udp"
+public let kOSCServiceTypeTCP: String = "_osc._tcp"
+
+public enum OSCNetworkingError: Error {
+    case invalidNetworkDesignation
+    case notConnected
+}
+
 //MARK: - Logging
 
 internal var OSCNetworkLogger: Logger = {
@@ -59,6 +69,25 @@ extension Data {
 
         return begins..<ends
     }
+    
+    //Attempts to decode data to appropriate OSCPacketContents
+    // type based on leading char
+    func parseOSCPacket() throws -> OSCPacketContents {
+        guard let first = first else {
+            throw OSCEncodingError.invalidPacket
+        }
+        
+        switch Character(UnicodeScalar(first)) {
+        case OSCBundle.kOSCBundlePrefix:
+            return try OSCBundle(packet: self)
+            
+        case OSCAddressPattern.kOSCPartDelim:
+            return try OSCMessage(packet: self)
+            
+        default:
+            throw OSCEncodingError.invalidPacket
+        }
+    }
 }
 
 //MARK: - Array
@@ -75,6 +104,6 @@ extension Array {
 
 extension NWProtocolUDP {
     static var maxDatagramSize: Int = {
-        65507 //IPv4
+        65507 //Max datagram payload size IPv4 account for headers, etc.
     }()
 }

@@ -8,27 +8,70 @@
 import Foundation
 import Network
 
-//MARK: - Definitions
+//MARK: - OSCServerDelegate
 
-public let kOSCServiceTypeUDP: String = "_osc._udp"
-public let kOSCServiceTypeTCP: String = "_osc._tcp"
-
-public enum OSCNetworkingError: Error {
-    case invalidNetworkDesignation
-    case notConnected
+///Delegate for notifications of network state change of the listener
+public protocol OSCServerDelegate: AnyObject {
+    func listenerStateChange(state: NWListener.State)
 }
 
-//MARK: - OSCNetworkServerDelegate
+//MARK: - OSCServerUDP
 
-public protocol OSCNetworkServerDelegate: AnyObject {
-    func listenerStateChange(state: NWListener.State)
+///UDP based OSC server
+public class OSCServerUDP: OSCNetworkServer {
+    weak var delegate: OSCServerDelegate? = nil
+    var serviceType: String = kOSCServiceTypeUDP
+    
+    internal var listener: NWListener? = nil
+    internal var parameters: NWParameters = {
+        var params: NWParameters = NWParameters(dtls: nil, udp: NWProtocolUDP.Options())
+        params.includePeerToPeer = true
+        return params
+    }()
+    internal var manager: OSCConnectionManager = OSCConnectionManager()
+
+    deinit {
+        cancel()
+    }
+}
+
+//MARK: - OSCServerTCP
+
+///TCP based OSC server
+public class OSCServerTCP: OSCNetworkServer {
+    weak var delegate: OSCServerDelegate? = nil
+    var serviceType: String = kOSCServiceTypeTCP
+    
+    internal var listener: NWListener? = nil
+    internal var parameters: NWParameters = {
+        //Customize TCP options to enable keepalives
+        let tcpOptions = NWProtocolTCP.Options()
+        tcpOptions.enableKeepalive = true
+        tcpOptions.keepaliveIdle = 2
+
+        //Enable peer to peer and endpoint reuse by default
+        var params: NWParameters = NWParameters(tls: nil, tcp: tcpOptions)
+        params.includePeerToPeer = true
+        params.allowLocalEndpointReuse = true
+        
+        //Insert our SLIP protocol framer at the top of the stack
+        let SLIPOptions = NWProtocolFramer.Options(definition: SLIPProtocol.definition)
+        params.defaultProtocolStack.applicationProtocols.insert(SLIPOptions, at: .zero)
+        return params
+    }()
+    internal var manager: OSCConnectionManager = OSCConnectionManager()
+    
+    deinit {
+        cancel()
+    }
 }
 
 //MARK: - OSCNetworkServer protocol
 
 protocol OSCNetworkServer: AnyObject {
+    var delegate: OSCServerDelegate? { get set }
+
     var serviceType: String { get set }
-    var delegate: OSCNetworkServerDelegate? { get set }
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
@@ -81,17 +124,11 @@ extension OSCNetworkServer {
     }
         
     func register(methods: [OSCMethod]) throws {
-        try methods.forEach {
-            try register(method: $0)
-        }
+        try manager.addressSpace.register(methods: methods)
     }
     
     func register(method: OSCMethod) throws {
-        guard method.addressPattern.isValidOSCAddress() else {
-            throw OSCEncodingError.invalidAddress
-        }
-
-        manager.addressSpace.register(method: method)
+        try manager.addressSpace.register(method: method)
     }
 
     func deregister(method: OSCMethod) {
@@ -100,55 +137,6 @@ extension OSCNetworkServer {
     
     func deregisterAll() {
         manager.addressSpace.removeAll()
-    }
-}
-
-//MARK: - OSCServerUDP
-
-public class OSCServerUDP: OSCNetworkServer {
-    weak var delegate: OSCNetworkServerDelegate? = nil
-
-    internal var serviceType: String = kOSCServiceTypeUDP
-    internal var listener: NWListener? = nil
-    internal var parameters: NWParameters = {
-        var params: NWParameters = NWParameters(dtls: nil, udp: NWProtocolUDP.Options())
-        params.includePeerToPeer = true
-        return params
-    }()
-    internal var manager: OSCConnectionManager = OSCConnectionManager()
-
-    deinit {
-        cancel()
-    }
-}
-
-//MARK: - OSCServerTCP
-
-public class OSCServerTCP: OSCNetworkServer {
-    weak var delegate: OSCNetworkServerDelegate? = nil
-
-    internal var serviceType: String = kOSCServiceTypeTCP
-    internal var listener: NWListener? = nil
-    internal var parameters: NWParameters = {
-        //Customize TCP options to enable keepalives
-        let tcpOptions = NWProtocolTCP.Options()
-        tcpOptions.enableKeepalive = true
-        tcpOptions.keepaliveIdle = 2
-
-        //Enable peer to peer and endpoint reuse by default
-        var params: NWParameters = NWParameters(tls: nil, tcp: tcpOptions)
-        params.includePeerToPeer = true
-        params.allowLocalEndpointReuse = true
-        
-        //Insert our SLIP protocol framer at the top of the stack
-        let SLIPOptions = NWProtocolFramer.Options(definition: SLIPProtocol.definition)
-        params.defaultProtocolStack.applicationProtocols.insert(SLIPOptions, at: .zero)
-        return params
-    }()
-    internal var manager: OSCConnectionManager = OSCConnectionManager()
-    
-    deinit {
-        cancel()
     }
 }
 
@@ -194,7 +182,7 @@ internal class OSCConnectionManager {
 
             if isComplete, let content = content {
                 do {
-                    let packet = try OSCPacketFactory.decodeOSCPacket(packet: content)
+                    let packet = try content.parseOSCPacket()
                     self?.addressSpace.dispatch(packet: packet)
                 } catch {
                     OSCNetworkLogger.error("OSCPacket decode failure: \(error.localizedDescription)")

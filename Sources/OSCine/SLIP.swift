@@ -16,43 +16,46 @@ enum SLIPProtocolError: Error {
     case decodingFailure
 }
 
-enum SLIPCodes: UInt8 {
+enum SLIPEscapeCodes: UInt8 {
     case END = 0o0300
     case ESC = 0o0333
     case ESC_END = 0o0334
     case ESC_ESC = 0o0335
 }
 
-extension SLIPCodes {
+extension SLIPEscapeCodes {
     //Characters needing escape sequences
     static var escapedChars: [UInt8] {
-        [SLIPCodes.END.rawValue, SLIPCodes.ESC.rawValue]
+        [SLIPEscapeCodes.END.rawValue,
+         SLIPEscapeCodes.ESC.rawValue]
     }
     
     //Escape sequence for end char
     static var endEscape: Data {
-        Data([SLIPCodes.ESC.rawValue, SLIPCodes.ESC_END.rawValue])
+        Data([SLIPEscapeCodes.ESC.rawValue,
+              SLIPEscapeCodes.ESC_END.rawValue])
     }
     
     //Escape sequence for esc char
     static var escEscape: Data {
-        Data([SLIPCodes.ESC.rawValue, SLIPCodes.ESC_ESC.rawValue])
+        Data([SLIPEscapeCodes.ESC.rawValue,
+              SLIPEscapeCodes.ESC_ESC.rawValue])
     }
     
     //Datagram termination sequence
     static var end: Data {
-        Data([SLIPCodes.END.rawValue])
+        Data([SLIPEscapeCodes.END.rawValue])
     }
     
     //Datagram escape initiation
     static var esc: Data {
-        Data([SLIPCodes.ESC.rawValue])
+        Data([SLIPEscapeCodes.ESC.rawValue])
     }
 }
 
 //MARK: - Data Extension
 
-//Data extension for conversion to/from SLIP for direct serialization of data in memory
+//Data extension for conversion to/from SLIP encoded datagrams
 extension Data {
     //Returns copy of data with SLIP encoding applied
     // Assumes data is single datagram
@@ -67,26 +70,26 @@ extension Data {
     mutating func SLIPEncode() {
         //walk data looking for characters requiring escape and replace with escape sequence
         var nextOffset = startIndex
-        while let escIndex = self[nextOffset...].firstIndex(where: { SLIPCodes.escapedChars.contains($0) }) {
-            guard let slipEsc = SLIPCodes(rawValue: self[escIndex]) else {
+        while let escIndex = self[nextOffset...].firstIndex(where: { SLIPEscapeCodes.escapedChars.contains($0) }) {
+            guard let slipEsc = SLIPEscapeCodes(rawValue: self[escIndex]) else {
                 fatalError("SLIP encode failure")
             }
             
             switch slipEsc {
-            case SLIPCodes.END:
-                replaceSubrange(escIndex...escIndex, with: SLIPCodes.endEscape)
-                nextOffset = escIndex + SLIPCodes.endEscape.count
+            case SLIPEscapeCodes.END:
+                replaceSubrange(escIndex...escIndex, with: SLIPEscapeCodes.endEscape)
+                nextOffset = escIndex + SLIPEscapeCodes.endEscape.count
                 
-            case SLIPCodes.ESC:
-                replaceSubrange(escIndex...escIndex, with: SLIPCodes.escEscape)
-                nextOffset = escIndex + SLIPCodes.escEscape.count
+            case SLIPEscapeCodes.ESC:
+                replaceSubrange(escIndex...escIndex, with: SLIPEscapeCodes.escEscape)
+                nextOffset = escIndex + SLIPEscapeCodes.escEscape.count
                 
             default:
                 fatalError("SLIP encode failure")
             }
         }
         
-        append(SLIPCodes.end)
+        append(SLIPEscapeCodes.end)
     }
     
     //Returns copy of data with SLIP encoding removed
@@ -99,23 +102,23 @@ extension Data {
     //Remove SLIP encoding in place on current data
     mutating func SLIPDecode() throws {
         //check for END at end... before decode
-        if last == SLIPCodes.END.rawValue {
+        if last == SLIPEscapeCodes.END.rawValue {
             removeLast()
         }
 
         //walk data looking for escape sequences and replacing with unescaped values
         var currentPos: Int = startIndex
-        while let nextEscape = range(of: SLIPCodes.esc, options:[], in: currentPos..<endIndex) {
+        while let nextEscape = range(of: SLIPEscapeCodes.esc, options:[], in: currentPos..<endIndex) {
             guard nextEscape.startIndex + 1 < endIndex else {
                 throw SLIPProtocolError.decodingFailure
             }
             
             switch self[nextEscape.startIndex + 1] {
-            case SLIPCodes.ESC_END.rawValue:
-                replaceSubrange(nextEscape.startIndex...nextEscape.startIndex + 1, with: SLIPCodes.end)
+            case SLIPEscapeCodes.ESC_END.rawValue:
+                replaceSubrange(nextEscape.startIndex...nextEscape.startIndex + 1, with: SLIPEscapeCodes.end)
                 
-            case SLIPCodes.ESC_ESC.rawValue:
-                replaceSubrange(nextEscape.startIndex...nextEscape.startIndex + 1, with: SLIPCodes.esc)
+            case SLIPEscapeCodes.ESC_ESC.rawValue:
+                replaceSubrange(nextEscape.startIndex...nextEscape.startIndex + 1, with: SLIPEscapeCodes.esc)
                 
             default:
                 throw SLIPProtocolError.decodingFailure
@@ -150,7 +153,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                 //Confirm we have a buffer and that it contains at least one datagram terminator
                 //This is kind of cheating but testing for partial SLIP escape sequences complicated things unnecessarily
                 // as we need the complete packet before data is delivered up the stack
-                guard let buffer = buffer, let datagramTerminator = buffer.firstIndex(of: SLIPCodes.END.rawValue) else {
+                guard let buffer = buffer, let datagramTerminator = buffer.firstIndex(of: SLIPEscapeCodes.END.rawValue) else {
                     //many/most datagrams will be short so ask for more data as quickly as available
                     return .zero
                 }
@@ -181,8 +184,6 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     }
     
     func handleOutput(framer: NWProtocolFramer.Instance, message: NWProtocolFramer.Message, messageLength: Int, isComplete: Bool) {
-        //Loop
-        // Send available data up to characater needing escape, Send escape sequence, Rinse, Repeat
         while true {
             let more = framer.parseOutput(minimumIncompleteLength: 1, maximumLength: Int.max) { unsafePointer, complete in
                 guard let unsafePointer = unsafePointer, unsafePointer.count > .zero else {
@@ -190,9 +191,9 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                 }
                 
                 do {
-                    //find next char needing escape
-                    if let esc = unsafePointer.firstIndex(where: { SLIPCodes.escapedChars.contains($0) }) {
-                        guard let slipEsc = SLIPCodes(rawValue: unsafePointer[esc]) else {
+                    //scan for next char needing escape
+                    if let esc = unsafePointer.firstIndex(where: { SLIPEscapeCodes.escapedChars.contains($0) }) {
+                        guard let slipEsc = SLIPEscapeCodes(rawValue: unsafePointer[esc]) else {
                             fatalError("SLIP encode failure")
                         }
 
@@ -201,14 +202,14 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         
                         //send the escape sequence for the char needing escape
                         switch slipEsc {
-                        case SLIPCodes.END:
-                            framer.writeOutput(data: SLIPCodes.endEscape)
+                        case SLIPEscapeCodes.END:
+                            framer.writeOutput(data: SLIPEscapeCodes.endEscape)
 
-                        case SLIPCodes.ESC:
-                            framer.writeOutput(data: SLIPCodes.escEscape)
+                        case SLIPEscapeCodes.ESC:
+                            framer.writeOutput(data: SLIPEscapeCodes.escEscape)
 
                         default:
-                            break
+                            fatalError("Unhandled SLIP escape character encountered")
                         }
 
                         //skip over encoded char on next iteration
@@ -231,7 +232,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
         
         //If this is end of message, write SLIP terminator
         if isComplete {
-            framer.writeOutput(data: SLIPCodes.end)
+            framer.writeOutput(data: SLIPEscapeCodes.end)
         }
     }
 }

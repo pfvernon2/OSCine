@@ -18,7 +18,14 @@ public enum OSCEncodingError: Error {
     case invalidArgumentList
     case invalidMessage
     case invalidBundle
+    case invalidPacket
     case invalidAddress
+}
+
+public enum OSCPatternMatchType: Comparable {
+    case none
+    case container
+    case full
 }
 
 enum OSCDataTypeTag: Character {
@@ -36,12 +43,6 @@ enum OSCDataTypeTag: Character {
     case timetag = "t"
 }
 
-public enum OSCPatternMatchType: Comparable {
-    case none
-    case container
-    case full
-}
-
 extension OSCDataTypeTag {
     var tagData: Data {
         guard let intValue: UInt8 = self.rawValue.asciiValue else {
@@ -54,16 +55,23 @@ extension OSCDataTypeTag {
 
 //MARK: - OSCDataType Protocol
 
-//Protocol for specifying valid OSC Data Types
+//Protocol for specifying OSC Data Types
 protocol OSCDataType {
-    func OSCEncoded() throws -> Data
-    
     var tag: OSCDataTypeTag { get }
+
+    func OSCEncoded() throws -> Data
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType
 }
 
 extension OSCDataType {
-    //Many OSC Data types have no associated data thus this defaul implementation
-    func OSCEncoded() throws -> Data { Data() }
+    //Many OSC Data types have no associated data thus this default implementation
+    func OSCEncoded() throws -> Data {
+        Data()
+    }
+    
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
+        fatalError("Unexpected use of default protocol implementation")
+    }
 }
 
 //MARK: - Data Types
@@ -78,7 +86,7 @@ extension OSCInt: OSCDataType {
         return Data(bytes: &source, count: MemoryLayout<Self>.size)
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCInt {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
         guard data.endIndex >= offset + 4 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -107,7 +115,7 @@ extension OSCFloat: OSCDataType {
         return Data(result)
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCFloat {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
         guard data.endIndex >= offset + 4 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -136,18 +144,11 @@ public struct OSCTimeTag: Codable, Equatable, Comparable {
         return OSCTimeTag.OSCEpoch.addingTimeInterval(interval)
     }
     
-    var immediate: Bool {
+    var isImmediate: Bool {
         seconds == 0 && picoseconds == 1
     }
     
-    public init(immediate: Bool = false) {
-        seconds = 0
-        picoseconds = 0
-
-        if immediate {
-            picoseconds = 1
-        }
-    }
+    static var immediate: OSCTimeTag = OSCTimeTag(seconds: 0, picoseconds: 1)
     
     public init(seconds: UInt32, picoseconds: UInt32) {
         self.seconds = seconds
@@ -166,12 +167,14 @@ public struct OSCTimeTag: Codable, Equatable, Comparable {
     }
     
     private static var OSCEpoch: Date = {
-        //midnight on January 1, 1900
+        //midnight January 1, 1900
         let components = DateComponents(calendar: Calendar(identifier: .gregorian),
                                         year: 1900,
                                         month: 1,
                                         day: 1,
-                                        hour: 0)
+                                        hour: .zero,
+                                        minute: .zero,
+                                        second: .zero)
         guard let origin = components.date else {
             fatalError("OSC Epoch Date could not be computed")
         }
@@ -195,7 +198,7 @@ extension OSCTimeTag: OSCDataType {
         return result
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCTimeTag {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
         guard data.endIndex >= offset + 8 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -231,7 +234,7 @@ extension OSCString: OSCDataType {
         return data
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCString {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
         guard let stringRange = data.nextCStr(after: offset),
               let result = String(data: data[stringRange], encoding: .utf8) else {
             throw OSCEncodingError.invalidMessage
@@ -253,8 +256,11 @@ extension OSCBlob: OSCDataType {
         return blob
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCBlob {
-        let blobSize = try OSCInt.OSCDecoded(data: data, at: &offset)
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataType {
+        guard let blobSize = try OSCInt.OSCDecoded(data: data, at: &offset) as? OSCInt else {
+            throw OSCEncodingError.invalidMessage
+        }
+        
         let endData = offset + Int(blobSize)
         guard endData < data.endIndex else {
             throw OSCEncodingError.invalidMessage
@@ -268,19 +274,22 @@ extension OSCBlob: OSCDataType {
 }
 
 public struct OSCNull: OSCDataType {
+    typealias OSCType = OSCNull
+
     var tag: OSCDataTypeTag { .null }
 }
 
 public struct OSCImpulse: OSCDataType {
+    typealias OSCType = OSCImpulse
+
     var tag: OSCDataTypeTag { .impulse }
 }
 
 public typealias OSCAddressPattern = OSCString
 extension OSCAddressPattern {
-    static let OSCAddressPartDelimiter: Character = "/"
+    static let kOSCPartDelim: Character = "/"
     
-    //Set of reserved characters which are not allowed in
-    // address patterns
+    //Set of reserved characters for address patterns
     enum reserved: Character, CaseIterable {
         case space = " "
         case hash = "#"
@@ -298,7 +307,7 @@ extension OSCAddressPattern {
     }
     
     func isValidOSCAddress() -> Bool {
-        first == String.OSCAddressPartDelimiter
+        first == OSCAddressPattern.kOSCPartDelim
             && reserved.reservedCharSet.isDisjoint(with: CharacterSet(charactersIn: self))
     }
         
@@ -306,9 +315,6 @@ extension OSCAddressPattern {
     //  Walk the pattern and address char by char matching chars based on
     //  rules of the various wildcard elements. Break out of loop
     //  on first occurance of a non-match.
-    //
-    // I considered doing this on Data instead but String is the natural
-    // data type for addresses and patterns so I'm doing this all here.
     func oscMethodAddressMatch(pattern: String) -> OSCPatternMatchType {
         var addressPos = startIndex
         var patternPos = pattern.startIndex
@@ -324,7 +330,7 @@ extension OSCAddressPattern {
         }
         
         func currAddressSegment() -> Substring {
-            guard let segment = self[addressPos...].range(of: "/") else {
+            guard let segment = self[addressPos...].range(of: String(OSCAddressPattern.kOSCPartDelim)) else {
                 return self[addressPos...]
             }
             return self[addressPos..<segment.lowerBound]
@@ -345,23 +351,22 @@ extension OSCAddressPattern {
             patternPos < pattern.endIndex ? pattern[patternPos] : nil
         }
         
-        func bracketCharSet() -> (Bool, Array<Character>)? {
-            guard currPatternChar() == "[" else {
+        func patternCharsBetween(start: Character, end: Character) -> Array<Character>? {
+            guard currPatternChar() == start else {
                 return nil
             }
             
-            var inverted = false
             var charray = Array<Character>()
-            //get set of chars between brackers,
             while true {
                 patternInc()
                 
                 // if we hit end or end of segment we have an error
-                guard let current = currPatternChar(), current != "/" else {
+                guard let current = currPatternChar(),
+                      current != OSCAddressPattern.kOSCPartDelim else {
                     return nil
                 }
                 
-                guard current != "]" else {
+                guard current != end else {
                     patternInc()
                     break
                 }
@@ -369,7 +374,16 @@ extension OSCAddressPattern {
                 charray.append(current)
             }
             
+            return charray
+        }
+        
+        func bracketCharSet() -> (Bool, Array<Character>)? {
+            guard var charray = patternCharsBetween(start: "[", end: "]") else {
+                return nil
+            }
+            
             //check for inverted meaning
+            var inverted = false
             if let first = charray.first, first == "!" {
                 inverted = true
                 charray.removeFirst()
@@ -396,40 +410,23 @@ extension OSCAddressPattern {
         }
         
         func parenStringSet() -> [Self.SubSequence]? {
-            guard currPatternChar() == "{" else {
+            guard let charray = patternCharsBetween(start: "{", end: "}") else {
                 return nil
             }
             
-            //get set of chars between parens
-            var strings = String()
-            while true {
-                patternInc()
-                
-                // if we hit end or end of segment we have an error
-                guard let current = currPatternChar(), current != "/" else {
-                    return nil
-                }
-                
-                guard current != "}" else {
-                    patternInc()
-                    break
-                }
-                
-                strings.append(current)
-            }
-            
-            return strings.split(separator: ",")
+            return String(charray).split(separator: ",")
         }
         
-        patternLoop: while currPatternChar() != nil {
+        patternLoop: while let patternChar = currPatternChar() {
             let startPattern = patternPos
-            switch currPatternChar() {
-            case "?":
+            switch patternChar {
+            case "?": //Match Single
                 //match any single char, except segment termination or end of address
                 // i.e. there must be at least one more char before
                 // the segment termination or end of address:
                 // /foo/bar? would match: /foo/bar1, but not /foo/bar/1 or /foo/bar
-                guard let current = currAddressChar(), current != "/" else {
+                guard let current = currAddressChar(),
+                      current != OSCAddressPattern.kOSCPartDelim else {
                     addressPos = endIndex
                     patternPos = startPattern
                     break patternLoop
@@ -438,21 +435,23 @@ extension OSCAddressPattern {
                 patternInc()
                 addressInc()
                 
-            case "*":
+            case "*": //Match Any
                 //match zero or more chars, except segment termination or end of address
                 // /foo/bar* would match: /foo/bar1111 or /foo/bar, but not /foo/bar/1111
                 patternInc()
-                while let current = currAddressChar(), current != "/", current != currPatternChar() {
+                while let current = currAddressChar(),
+                      current != OSCAddressPattern.kOSCPartDelim,
+                      current != currPatternChar() {
                     addressInc()
                 }
                 
-            case "[":
+            case "[": //Match single from range
                 //match any single char based on the set of characters expressed in the brackets,
                 // except segment termination or end of address
                 // i.e. there must be at least one more char before
                 // the segment termination or end of address:
                 // /foo/bar[1-2] would match: /foo/bar1, but not /foo/bar/1 or /foo/bar
-                guard let current = currAddressChar(), current != "/",
+                guard let current = currAddressChar(), current != OSCAddressPattern.kOSCPartDelim,
                       let (inverted, charray) = bracketCharSet(),
                       charray.contains(current) != inverted else {
                     addressPos = endIndex
@@ -463,7 +462,7 @@ extension OSCAddressPattern {
                 //bracketCharSet() increments the patternPos for us
                 addressInc()
 
-            case "{":
+            case "{": //Match string from list
                 //match (sub)string in segment based on set of strings in the parens,
                 // /foo/{bar,bar1} would match: /foo/bar or /foo/bar1, but not /foo/bar/1
                 // Note that we prefer the longest possible match over order
@@ -479,11 +478,12 @@ extension OSCAddressPattern {
                 //parenStringSet() increments the patternPos for us
                 addressInc(match.count)
 
-            case "/":
+            case "/": //Path segment termination or XPath wildcard
                 //Segment termination or possible start of XPath wildcard
                 // regardless check that current address is also starting
                 // at segment termination if not bail out
-                guard let current = currAddressChar(), current == "/" else {
+                guard let current = currAddressChar(),
+                      current == OSCAddressPattern.kOSCPartDelim else {
                     addressPos = endIndex
                     patternPos = startPattern
                     break patternLoop
@@ -493,7 +493,7 @@ extension OSCAddressPattern {
                 addressInc()
                 
                 //check for XPath wildcard in pattern
-                if currPatternChar() == "/" {
+                if currPatternChar() == OSCAddressPattern.kOSCPartDelim {
                     patternInc()
 
                     //Match remaining segments of the pattern with remaining segments of the address
@@ -515,7 +515,7 @@ extension OSCAddressPattern {
                             break
                         }
                         
-                        guard let nextSegment = self[addressPos...].range(of: "/") else {
+                        guard let nextSegment = self[addressPos...].range(of: String(OSCAddressPattern.kOSCPartDelim)) else {
                             break
                         }
                         
@@ -547,12 +547,14 @@ extension OSCAddressPattern {
         }
         
         //pattern shorter than address - check to see if we are at address segment termination
-        else if patternPos == pattern.endIndex && currAddressChar() == "/" {
+        else if patternPos == pattern.endIndex
+                    && currAddressChar() == OSCAddressPattern.kOSCPartDelim {
             return .container
         }
         
         //pattern shorter than address - edge case pattern ends in segment termination
-        else if patternPos == pattern.endIndex && (pattern.last == "/" && prevAddressChar() == "/") {
+        else if patternPos == pattern.endIndex
+                    && (pattern.last == OSCAddressPattern.kOSCPartDelim && prevAddressChar() == OSCAddressPattern.kOSCPartDelim) {
             return .container
         }
 
@@ -561,27 +563,6 @@ extension OSCAddressPattern {
 }
 
 //MARK: - OSC Packets
-
-//Trivial factory class to create OSCPacketContents from data
-// …annoying that Swift does not support static functions on protocols
-struct OSCPacketFactory {
-    static func decodeOSCPacket(packet: Data) throws -> OSCPacketContents {
-        guard let first = packet.first else {
-            throw OSCEncodingError.invalidBundle
-        }
-        
-        switch Character(UnicodeScalar(first)) {
-        case OSCBundle.kOSCBundlePrefix:
-            return try OSCBundle(packet: packet)
-            
-        case OSCAddressPattern.OSCAddressPartDelimiter:
-            return try OSCMessage(packet: packet)
-            
-        default:
-            throw OSCEncodingError.invalidBundle
-        }
-    }
-}
 
 //Protocol defining basic OSCPacket contents and operations on the contents
 protocol OSCPacketContents: AnyObject {
@@ -702,7 +683,7 @@ public class OSCBundle {
     init() {
     }
     
-    init(timeTag: OSCTimeTag, bundleElements: OSCPacketContentsArray) {
+    init(timeTag: OSCTimeTag = .immediate, bundleElements: OSCPacketContentsArray) {
         self.timeTag = timeTag
         self.bundleElements = bundleElements
     }
@@ -754,7 +735,7 @@ extension OSCBundle: OSCPacketContents {
                 
         //read time tag
         var currPos = 8 //step over ident
-        timeTag = try OSCTimeTag.OSCDecoded(data: packet, at: &currPos)
+        timeTag = try OSCTimeTag.OSCDecoded(data: packet, at: &currPos) as? OSCTimeTag
 
         //read bundleElements
         bundleElements = OSCPacketContentsArray()
@@ -762,13 +743,15 @@ extension OSCBundle: OSCPacketContents {
             let bundleData = packet[currPos...]
 
             //get size from front of data
-            let size = try OSCInt.OSCDecoded(data: bundleData, at: &currPos)
+            guard let size = try OSCInt.OSCDecoded(data: bundleData, at: &currPos) as? OSCInt else {
+                throw OSCEncodingError.invalidMessage
+            }
 
             //read data based on size
             let packetData = bundleData[currPos..<currPos + Int(size)]
             
             //decode element and append to array
-            let element = try OSCPacketFactory.decodeOSCPacket(packet: packetData)
+            let element = try packetData.parseOSCPacket()
             switch element {
             case is OSCMessage:
                 break
@@ -975,7 +958,17 @@ internal extension OSCMethod {
 // were this to be a tree, which it is not.
 internal typealias OSCAddressSpace = Array<OSCMethod>
 internal extension OSCAddressSpace {
-    mutating func register(method: OSCMethod) {
+    mutating func register(methods: [OSCMethod]) throws {
+        try methods.forEach {
+            try register(method: $0)
+        }
+    }
+
+    mutating func register(method: OSCMethod) throws {
+        guard method.addressPattern.isValidOSCAddress() else {
+            throw OSCEncodingError.invalidAddress
+        }
+
         append(method)
     }
     
