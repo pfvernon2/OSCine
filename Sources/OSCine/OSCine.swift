@@ -591,11 +591,13 @@ protocol OSCPacketContents: AnyObject {
 public class OSCMessage {
     public var addressPattern: OSCAddressPattern? = nil
     public var arguments: OSCArgumentArray? = nil
-    var argumentTypes: OSCTypeTagArray? {
+    internal var argumentTypes: OSCTypeTagArray? {
         arguments?.typeTags()
     }
     
-    convenience init(address: OSCAddressPattern, arguments: OSCArgumentArray) {
+    public init() {}
+    
+    public convenience init(address: OSCAddressPattern, arguments: OSCArgumentArray) {
         self.init()
                 
         self.addressPattern = address
