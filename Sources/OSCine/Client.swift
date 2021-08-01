@@ -30,7 +30,7 @@ public class OSCClientUDP: OSCClient, NetworkClient {
     }()
     internal var browser: OSCServiceBrowser? = nil
 
-    init() {}
+    public init() {}
     deinit {
         connection?.cancel()
     }
@@ -61,7 +61,7 @@ public class OSCClientTCP: OSCClient, NetworkClient {
     }()
     internal var browser: OSCServiceBrowser? = nil
     
-    init() {}
+    public init() {}
     deinit {
         connection?.cancel()
     }
