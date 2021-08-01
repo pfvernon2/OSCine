@@ -299,7 +299,7 @@ class ClientTest: OSCClientDelegate {
     }()
 
     var useTCP: Bool = false
-    var client: OSCNetworkClient {
+    var client: OSCClient {
         useTCP ? tcpClient : udpClient
     }
     
@@ -357,7 +357,7 @@ class ServerTest: OSCServerDelegate {
     }()
     
     var useTCP: Bool = false
-    var server: OSCNetworkServer {
+    var server: OSCServer {
         useTCP ? tcpServer : udpServer
     }
     

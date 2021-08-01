@@ -18,9 +18,9 @@ public protocol OSCClientDelegate: AnyObject {
 //MARK: - OSCClientUDP
 
 ///UDP based OSC client
-public class OSCClientUDP: OSCNetworkClient {
-    weak var delegate: OSCClientDelegate? = nil
-    var serviceType: String = kOSCServiceTypeUDP
+public class OSCClientUDP: OSCClient, NetworkClient {
+    weak public var delegate: OSCClientDelegate? = nil
+    public var serviceType: String = kOSCServiceTypeUDP
     
     internal var connection: NWConnection? = nil
     internal var parameters: NWParameters = {
@@ -30,6 +30,7 @@ public class OSCClientUDP: OSCNetworkClient {
     }()
     internal var browser: OSCServiceBrowser? = nil
 
+    init() {}
     deinit {
         connection?.cancel()
     }
@@ -38,9 +39,9 @@ public class OSCClientUDP: OSCNetworkClient {
 //MARK: - OSCClientTCP
 
 ///TCP based OSC client
-public class OSCClientTCP: OSCNetworkClient {
-    weak var delegate: OSCClientDelegate? = nil
-    var serviceType: String = kOSCServiceTypeTCP
+public class OSCClientTCP: OSCClient, NetworkClient {
+    weak public var delegate: OSCClientDelegate? = nil
+    public var serviceType: String = kOSCServiceTypeTCP
     
     internal var connection: NWConnection? = nil
     internal var parameters: NWParameters = {
@@ -59,7 +60,8 @@ public class OSCClientTCP: OSCNetworkClient {
         return params
     }()
     internal var browser: OSCServiceBrowser? = nil
-
+    
+    init() {}
     deinit {
         connection?.cancel()
     }
@@ -67,13 +69,15 @@ public class OSCClientTCP: OSCNetworkClient {
 
 //MARK: - OSCNetworkClient Protocol
 
-protocol OSCNetworkClient: AnyObject {
-    var delegate: OSCClientDelegate? { get set }
-    var serviceType: String { get set }
-
+internal protocol NetworkClient: AnyObject {
     var connection: NWConnection? { get set }
     var parameters: NWParameters { get set }
     var browser: OSCServiceBrowser? { get set }
+}
+
+public protocol OSCClient: AnyObject {
+    var delegate: OSCClientDelegate? { get set }
+    var serviceType: String { get set }
     
     func connect(endpoint: NWEndpoint)
     func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
@@ -81,12 +85,17 @@ protocol OSCNetworkClient: AnyObject {
     
     func disconnect()
     
-    func send(_ packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws
+    func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws
+    func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws
 }
 
-extension OSCNetworkClient {
+public extension OSCClient {
     func connect(endpoint: NWEndpoint) {
-        connection = NWConnection(to: endpoint, using: parameters)
+        guard let client = self as? NetworkClient else {
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+        }
+
+        client.connection = NWConnection(to: endpoint, using: client.parameters)
         setupConnection()
     }
     
@@ -96,10 +105,14 @@ extension OSCNetworkClient {
     }
     
     func connect(serviceName: String, timeout: TimeInterval?) {
-        browser = OSCServiceBrowser(serviceType: serviceType, parameters: parameters)
-        browser?.start(timeout: timeout) { [weak self] results, error in
+        guard let client = self as? NetworkClient else {
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+        }
+
+        client.browser = OSCServiceBrowser(serviceType: serviceType, parameters: client.parameters)
+        client.browser?.start(timeout: timeout) { [weak self, weak client] results, error in
             guard error == nil else {
-                self?.browser?.cancel()
+                client?.browser?.cancel()
                 self?.delegate?.connectionStateChange(.failed(error!))
                 return
             }
@@ -109,17 +122,34 @@ extension OSCNetworkClient {
                 return
             }
             
-            self?.browser?.cancel()
+            client?.browser?.cancel()
             self?.connect(endpoint: match.endpoint)
         }
     }
     
     func disconnect() {
-        connection?.cancel()
+        guard let client = self as? NetworkClient else {
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+        }
+
+        client.connection?.cancel()
     }
     
-    func send(_ packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
-        guard let connection = connection, connection.state == .ready else {
+    func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws {
+        try send(packetContents: message, completion: completion)
+    }
+    
+    func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
+        try send(packetContents: bundle, completion: completion)
+    }
+
+    internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
+        guard let client = self as? NetworkClient else {
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+        }
+
+        guard let connection = client.connection,
+              connection.state == .ready else {
             throw OSCNetworkingError.notConnected
         }
         
@@ -130,17 +160,21 @@ extension OSCNetworkClient {
     }
     
     fileprivate func setupConnection() {
-        guard let connection = connection else {
+        guard let client = self as? NetworkClient else {
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+        }
+
+        guard let connection = client.connection else {
             return
         }
         
-        connection.stateUpdateHandler = { [weak self] (state) in
+        connection.stateUpdateHandler = { [weak self, weak client] (state) in
             switch state {
             case .failed(let error):
                 OSCNetworkLogger.debug("\(connection.debugDescription) failed: \(error.debugDescription)")
                 fallthrough
             case .cancelled:
-                self?.connection = nil
+                client?.connection = nil
                 
             default:
                 break

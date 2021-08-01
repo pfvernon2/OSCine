@@ -18,7 +18,7 @@ public protocol OSCServerDelegate: AnyObject {
 //MARK: - OSCServerUDP
 
 ///UDP based OSC server
-public class OSCServerUDP: OSCNetworkServer, Server {
+public class OSCServerUDP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeUDP
     
@@ -30,9 +30,7 @@ public class OSCServerUDP: OSCNetworkServer, Server {
     }()
     internal var manager: OSCConnectionManager = OSCConnectionManager()
 
-    public init() {
-    }
-    
+    public init() {}
     deinit {
         cancel()
     }
@@ -41,7 +39,7 @@ public class OSCServerUDP: OSCNetworkServer, Server {
 //MARK: - OSCServerTCP
 
 ///TCP based OSC server
-public class OSCServerTCP: OSCNetworkServer, Server {
+public class OSCServerTCP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeTCP
     
@@ -64,22 +62,20 @@ public class OSCServerTCP: OSCNetworkServer, Server {
     }()
     internal var manager: OSCConnectionManager = OSCConnectionManager()
     
-    public init() {
-    }
-
+    public init() {}
     deinit {
         cancel()
     }
 }
 
 //MARK: - OSCNetworkServer protocol
-internal protocol Server: AnyObject {
+internal protocol NetworkServer: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
 }
 
-public protocol OSCNetworkServer: AnyObject {
+public protocol OSCServer: AnyObject {
     var delegate: OSCServerDelegate? { get set }
     var serviceType: String { get set }
     
@@ -92,9 +88,9 @@ public protocol OSCNetworkServer: AnyObject {
     func deregisterAll()
 }
 
-public extension OSCNetworkServer {
+public extension OSCServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
-        guard let server = self as? Server else {
+        guard let server = self as? NetworkServer else {
             throw OSCNetworkingError.invalidNetworkDesignation
         }
         
@@ -131,27 +127,27 @@ public extension OSCNetworkServer {
     }
     
     func cancel() {
-        let server = self as? Server
+        let server = self as? NetworkServer
         server?.listener?.cancel()
     }
         
     func register(methods: [OSCMethod]) throws {
-        let server = self as? Server
+        let server = self as? NetworkServer
         try server?.manager.addressSpace.register(methods: methods)
     }
     
     func register(method: OSCMethod) throws {
-        let server = self as? Server
+        let server = self as? NetworkServer
         try server?.manager.addressSpace.register(method: method)
     }
 
     func deregister(method: OSCMethod) {
-        let server = self as? Server
+        let server = self as? NetworkServer
         server?.manager.addressSpace.deregister(method: method)
     }
     
     func deregisterAll() {
-        let server = self as? Server
+        let server = self as? NetworkServer
         server?.manager.addressSpace.removeAll()
     }
 }
