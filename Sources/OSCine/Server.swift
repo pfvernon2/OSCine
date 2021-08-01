@@ -30,7 +30,7 @@ public class OSCServerUDP: OSCNetworkServer, Server {
     }()
     internal var manager: OSCConnectionManager = OSCConnectionManager()
 
-    init() {
+    public init() {
     }
     
     deinit {
@@ -64,7 +64,7 @@ public class OSCServerTCP: OSCNetworkServer, Server {
     }()
     internal var manager: OSCConnectionManager = OSCConnectionManager()
     
-    init() {
+    public init() {
     }
 
     deinit {
