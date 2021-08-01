@@ -18,9 +18,9 @@ public protocol OSCServerDelegate: AnyObject {
 //MARK: - OSCServerUDP
 
 ///UDP based OSC server
-public class OSCServerUDP: OSCNetworkServer {
-    weak var delegate: OSCServerDelegate? = nil
-    var serviceType: String = kOSCServiceTypeUDP
+public class OSCServerUDP: OSCNetworkServer, Server {
+    weak public var delegate: OSCServerDelegate? = nil
+    public var serviceType: String = kOSCServiceTypeUDP
     
     internal var listener: NWListener? = nil
     internal var parameters: NWParameters = {
@@ -38,9 +38,9 @@ public class OSCServerUDP: OSCNetworkServer {
 //MARK: - OSCServerTCP
 
 ///TCP based OSC server
-public class OSCServerTCP: OSCNetworkServer {
-    weak var delegate: OSCServerDelegate? = nil
-    var serviceType: String = kOSCServiceTypeTCP
+public class OSCServerTCP: OSCNetworkServer, Server {
+    weak public var delegate: OSCServerDelegate? = nil
+    public var serviceType: String = kOSCServiceTypeTCP
     
     internal var listener: NWListener? = nil
     internal var parameters: NWParameters = {
@@ -67,41 +67,46 @@ public class OSCServerTCP: OSCNetworkServer {
 }
 
 //MARK: - OSCNetworkServer protocol
-
-protocol OSCNetworkServer: AnyObject {
-    var delegate: OSCServerDelegate? { get set }
-
-    var serviceType: String { get set }
+internal protocol Server: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
+}
+
+public protocol OSCNetworkServer: AnyObject {
+    var delegate: OSCServerDelegate? { get set }
+    var serviceType: String { get set }
     
     func listen(on port: NWEndpoint.Port, serviceName: String?) throws
     func cancel()
     
     func register(method: OSCMethod) throws
+    func register(methods: [OSCMethod]) throws
     func deregister(method: OSCMethod)
-    
     func deregisterAll()
 }
 
-extension OSCNetworkServer {
+public extension OSCNetworkServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
-        listener = try NWListener(using: parameters, on: port)
+        guard let server = self as? Server else {
+            throw OSCNetworkingError.invalidNetworkDesignation
+        }
+        
+        server.listener = try NWListener(using: server.parameters, on: port)
         
         //advertise service if given a name
         if let serviceName = serviceName {
-            listener?.service = NWListener.Service(name: serviceName, type: serviceType)
+            server.listener?.service = NWListener.Service(name: serviceName, type: serviceType)
         }
         
-        listener?.stateUpdateHandler = { [weak self] (state) in
+        server.listener?.stateUpdateHandler = { [weak self, weak server] (state) in
             switch state {
             case .failed(let error):
                 OSCNetworkLogger.debug("Listener failed: \(error.debugDescription)")
                 fallthrough
             case .cancelled:
-                self?.manager.cancelAll()
-                self?.listener = nil
+                server?.manager.cancelAll()
+                server?.listener = nil
                 
             default:
                 break
@@ -110,33 +115,38 @@ extension OSCNetworkServer {
             self?.delegate?.listenerStateChange(state: state)
         }
         
-        listener?.newConnectionHandler = { [weak self] (connection) in
+        server.listener?.newConnectionHandler = { [weak server] (connection) in
             OSCNetworkLogger.debug("Received connection from: \(connection.debugDescription)")
-            self?.manager.add(connection: connection)
+            server?.manager.add(connection: connection)
         }
         
-        OSCNetworkLogger.debug("Starting listener: \(self.listener?.debugDescription ?? "?")")
-        listener?.start(queue: .main)
+        OSCNetworkLogger.debug("Starting listener: \(server.listener?.debugDescription ?? "?")")
+        server.listener?.start(queue: .main)
     }
     
     func cancel() {
-        listener?.cancel()
+        let server = self as? Server
+        server?.listener?.cancel()
     }
         
     func register(methods: [OSCMethod]) throws {
-        try manager.addressSpace.register(methods: methods)
+        let server = self as? Server
+        try server?.manager.addressSpace.register(methods: methods)
     }
     
     func register(method: OSCMethod) throws {
-        try manager.addressSpace.register(method: method)
+        let server = self as? Server
+        try server?.manager.addressSpace.register(method: method)
     }
 
     func deregister(method: OSCMethod) {
-        manager.addressSpace.deregister(method: method)
+        let server = self as? Server
+        server?.manager.addressSpace.deregister(method: method)
     }
     
     func deregisterAll() {
-        manager.addressSpace.removeAll()
+        let server = self as? Server
+        server?.manager.addressSpace.removeAll()
     }
 }
 
