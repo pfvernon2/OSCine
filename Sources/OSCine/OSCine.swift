@@ -59,7 +59,7 @@ extension OSCDataTypeTag {
 public protocol OSCDataType {
 }
 
-//Internal Protocol for specifying OSC Data Types
+//Internal Protocol for encode/decode of OSC Data Types
 protocol OSCDataCoding {
     var tag: OSCDataTypeTag { get }
 
@@ -68,13 +68,14 @@ protocol OSCDataCoding {
 }
 
 extension OSCDataCoding {
-    //Many OSC Data types have no associated data thus this default implementation
+    //Several OSC Data types have no associated data thus this default implementation
     func OSCEncoded() throws -> Data {
         Data()
     }
     
     static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
-        fatalError("Unexpected use of default protocol implementation")
+        assertionFailure("Unexpected use of default protocol implementation")
+        throw OSCEncodingError.invalidPacket
     }
 }
 
