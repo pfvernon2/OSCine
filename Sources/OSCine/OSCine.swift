@@ -293,12 +293,16 @@ public struct OSCNull: OSCDataType, OSCDataCoding {
     typealias OSCType = OSCNull
 
     var tag: OSCDataTypeTag { .null }
+
+    public init() {}
 }
 
 public struct OSCImpulse: OSCDataType, OSCDataCoding {
     typealias OSCType = OSCImpulse
 
     var tag: OSCDataTypeTag { .impulse }
+    
+    public init() {}
 }
 
 public typealias OSCAddressPattern = OSCString
