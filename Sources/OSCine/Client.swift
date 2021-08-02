@@ -79,10 +79,10 @@ public protocol OSCClient: AnyObject {
     var delegate: OSCClientDelegate? { get set }
     var serviceType: String { get set }
     
-    func connect(endpoint: NWEndpoint)
     func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
     func connect(serviceName: String, timeout: TimeInterval?)
-    
+    func connect(endpoint: NWEndpoint)
+
     func disconnect()
     
     func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws

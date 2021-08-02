@@ -69,6 +69,7 @@ public class OSCServerTCP: OSCServer, NetworkServer {
 }
 
 //MARK: - OSCNetworkServer protocol
+
 internal protocol NetworkServer: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
@@ -84,6 +85,7 @@ public protocol OSCServer: AnyObject {
     
     func register(method: OSCMethod) throws
     func register(methods: [OSCMethod]) throws
+    
     func deregister(method: OSCMethod)
     func deregisterAll()
 }
@@ -91,7 +93,7 @@ public protocol OSCServer: AnyObject {
 public extension OSCServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
         guard let server = self as? NetworkServer else {
-            throw OSCNetworkingError.invalidNetworkDesignation
+            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
         
         server.listener = try NWListener(using: server.parameters, on: port)
