@@ -56,24 +56,23 @@ extension OSCDataTypeTag {
 //MARK: - OSCType Protocol
 
 //Public protocol specifying OSC Types
-public protocol OSCDataType {
-}
+public protocol OSCDataType {}
 
 //Internal Protocol for encode/decode of OSC Data Types
-protocol OSCDataCoding {
+protocol OSCCodable {
     var tag: OSCDataTypeTag { get }
 
     func OSCEncoded() throws -> Data
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable
 }
 
-extension OSCDataCoding {
+extension OSCCodable {
     //Several OSC Data types have no associated data thus this default implementation
     func OSCEncoded() throws -> Data {
         Data()
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         assertionFailure("Unexpected use of default protocol implementation")
         throw OSCEncodingError.invalidPacket
     }
@@ -83,9 +82,8 @@ extension OSCDataCoding {
 
 //OSC Data Types
 public typealias OSCInt = Int32
-extension OSCInt: OSCDataType {
-}
-extension OSCInt: OSCDataCoding {
+extension OSCInt: OSCDataType {}
+extension OSCInt: OSCCodable {
     var tag: OSCDataTypeTag { .int }
     
     func OSCEncoded() throws -> Data {
@@ -93,7 +91,7 @@ extension OSCInt: OSCDataCoding {
         return Data(bytes: &source, count: MemoryLayout<Self>.size)
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         guard data.endIndex >= offset + 4 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -108,9 +106,8 @@ extension OSCInt: OSCDataCoding {
 }
 
 public typealias OSCFloat = Float32
-extension OSCFloat: OSCDataType {
-}
-extension OSCFloat: OSCDataCoding {
+extension OSCFloat: OSCDataType {}
+extension OSCFloat: OSCCodable {
     var tag: OSCDataTypeTag { .float }
     
     func OSCEncoded() throws -> Data {
@@ -124,7 +121,7 @@ extension OSCFloat: OSCDataCoding {
         return Data(result)
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         guard data.endIndex >= offset + 4 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -139,9 +136,8 @@ extension OSCFloat: OSCDataCoding {
 }
 
 public typealias OSCBool = Bool
-extension OSCBool: OSCDataType {
-}
-extension OSCBool: OSCDataCoding {
+extension OSCBool: OSCDataType {}
+extension OSCBool: OSCCodable {
     var tag: OSCDataTypeTag { self ? .true : .false }
 }
 
@@ -193,9 +189,8 @@ public struct OSCTimeTag: Codable, Equatable, Comparable {
         return origin
     }()
 }
-extension OSCTimeTag: OSCDataType {
-}
-extension OSCTimeTag: OSCDataCoding {
+extension OSCTimeTag: OSCDataType {}
+extension OSCTimeTag: OSCCodable {
     var tag: OSCDataTypeTag { .timetag }
     
     func OSCEncoded() throws -> Data {
@@ -210,7 +205,7 @@ extension OSCTimeTag: OSCDataCoding {
         return result
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         guard data.endIndex >= offset + 8 else {
             throw OSCEncodingError.invalidMessage
         }
@@ -231,9 +226,8 @@ extension OSCTimeTag: OSCDataCoding {
 }
 
 public typealias OSCString = String
-extension OSCString: OSCDataType {
-}
-extension OSCString: OSCDataCoding {
+extension OSCString: OSCDataType {}
+extension OSCString: OSCCodable {
     var tag: OSCDataTypeTag { .string }
     
     func OSCEncoded() throws -> Data {
@@ -248,7 +242,7 @@ extension OSCString: OSCDataCoding {
         return data
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         guard let stringRange = data.nextCStr(after: offset),
               let result = String(data: data[stringRange], encoding: .utf8) else {
             throw OSCEncodingError.invalidMessage
@@ -260,9 +254,8 @@ extension OSCString: OSCDataCoding {
 }
 
 public typealias OSCBlob = Data
-extension OSCBlob: OSCDataType {
-}
-extension OSCBlob: OSCDataCoding {
+extension OSCBlob: OSCDataType {}
+extension OSCBlob: OSCCodable {
     var tag: OSCDataTypeTag { .blob }
     
     func OSCEncoded() throws -> Data {
@@ -272,7 +265,7 @@ extension OSCBlob: OSCDataCoding {
         return blob
     }
     
-    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCDataCoding {
+    static func OSCDecoded(data: Data, at offset: inout Data.Index) throws -> OSCCodable {
         guard let blobSize = try OSCInt.OSCDecoded(data: data, at: &offset) as? OSCInt else {
             throw OSCEncodingError.invalidMessage
         }
@@ -289,7 +282,7 @@ extension OSCBlob: OSCDataCoding {
     }
 }
 
-public struct OSCNull: OSCDataType, OSCDataCoding {
+public struct OSCNull: OSCDataType, OSCCodable {
     typealias OSCType = OSCNull
 
     var tag: OSCDataTypeTag { .null }
@@ -297,7 +290,7 @@ public struct OSCNull: OSCDataType, OSCDataCoding {
     public init() {}
 }
 
-public struct OSCImpulse: OSCDataType, OSCDataCoding {
+public struct OSCImpulse: OSCDataType, OSCCodable {
     typealias OSCType = OSCImpulse
 
     var tag: OSCDataTypeTag { .impulse }
@@ -892,7 +885,7 @@ public typealias OSCArgumentArray = Array<OSCDataType>
 extension OSCArgumentArray {
     func typeTags() -> OSCTypeTagArray {
         reduce(into: OSCTypeTagArray(capacity: count)) {
-            guard let type = $1 as? OSCDataCoding else {
+            guard let type = $1 as? OSCCodable else {
                 return
             }
             $0.append(type.tag)
@@ -901,7 +894,7 @@ extension OSCArgumentArray {
     
     func OSCEncoded() throws -> Data {
         try reduce(into: Data(capacity: count)) {
-            guard let type = $1 as? OSCDataCoding else {
+            guard let type = $1 as? OSCCodable else {
                 return
             }
             $0.append(try type.OSCEncoded())
@@ -910,8 +903,8 @@ extension OSCArgumentArray {
     
     static func == (lhs: OSCArgumentArray, rhs: OSCArgumentArray) -> Bool {
         lhs.elementsEqual(rhs) {
-            guard let lhs = $0 as? OSCDataCoding,
-                  let rhs = $1 as? OSCDataCoding,
+            guard let lhs = $0 as? OSCCodable,
+                  let rhs = $1 as? OSCCodable,
                   lhs.tag == rhs.tag else {
                 return false
             }
