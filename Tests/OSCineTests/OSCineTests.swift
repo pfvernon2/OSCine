@@ -252,15 +252,15 @@ class MulticastTest: OSCMulticastClientServerDelegate {
         self.expectation = expectation
         
         do {
-            try mcast.connect(to: "224.0.0.251", port: 12345) //239.123.4.5
-
             //add expectation to methods and register
             testMethods.forEach {
                 $0.expectation = expectation
             }
             try mcast.register(methods: testMethods)
 
-            try mcast.start()
+            //start listening
+            try mcast.listen(on: "224.0.0.251", port: 12345)
+            
             testPrint("Multicast Test Started")
         } catch {
             XCTFail(error.localizedDescription)

@@ -18,7 +18,7 @@ public protocol OSCMulticastClientServerDelegate: AnyObject {
 //MARK: - OSCMulticastClientServer
 
 public class OSCMulticastClientServer {
-    weak var delegate: OSCMulticastClientServerDelegate? = nil
+    weak public var delegate: OSCMulticastClientServerDelegate? = nil
 
     internal var group: NWConnectionGroup? = nil
     internal var parameters: NWParameters = {
@@ -32,12 +32,17 @@ public class OSCMulticastClientServer {
     
     internal let sendQueue = DispatchQueue(label: "com.cyberdev.oscmulticastclientserver", qos: .utility)
     internal var sendSemaphore: DispatchSemaphore = DispatchSemaphore(value: 1)
-        
-    func connect(to address: NWEndpoint.Host, port: NWEndpoint.Port) throws {
-        try connect(to: .hostPort(host: address, port: port))
+
+    public init() {}
+    deinit {
+        cancel()
+    }
+
+    public func listen(on address: NWEndpoint.Host, port: NWEndpoint.Port) throws {
+        try listen(on: .hostPort(host: address, port: port))
     }
     
-    func connect(to endpoint: NWEndpoint) throws {
+    public func listen(on endpoint: NWEndpoint) throws {
         let multicast = try NWMulticastGroup(for: [endpoint])
         group = NWConnectionGroup(with: multicast, using: parameters)
         
@@ -53,27 +58,8 @@ public class OSCMulticastClientServer {
             
             self?.delegate?.groupStateChange(state: state)
         }
-    }
-    
-    func start() throws {
-        guard let group = group else {
-            throw OSCNetworkingError.notConnected
-        }
         
-        //It appears that multicast objects must have receive handler set
-        // before start or they will silently fail
-        // so we are enforcing this here
-        try receive()
-        
-        group.start(queue: .main)
-    }
-    
-    internal func receive() throws {
-        guard let group = group else {
-            throw OSCNetworkingError.notConnected
-        }
-
-        group.setReceiveHandler(maximumMessageSize: NWProtocolUDP.maxDatagramSize,
+        group?.setReceiveHandler(maximumMessageSize: NWProtocolUDP.maxDatagramSize,
                                  rejectOversizedMessages: true) { [weak self] (message, content, isComplete) in
             if isComplete, let content = content, let packet = try? content.parseOSCPacket() {
                 self?.manager.addressSpace.dispatch(packet: packet)
@@ -81,9 +67,40 @@ public class OSCMulticastClientServer {
                 self?.manager.add(connection: connection)
             }
         }
+        
+        group?.start(queue: .main)
     }
     
-    func send(_ packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
+    func cancel() {
+        group?.cancel()
+        group = nil
+    }
+        
+    public func register(methods: [OSCMethod]) throws {
+        try manager.addressSpace.register(methods: methods)
+    }
+    
+    public func register(method: OSCMethod) throws {
+        try manager.addressSpace.register(method: method)
+    }
+
+    public func deregister(method: OSCMethod) {
+        manager.addressSpace.deregister(method: method)
+    }
+    
+    public func deregisterAll() {
+        manager.addressSpace.removeAll()
+    }
+    
+    public func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws {
+        try send(packetContents: message, completion: completion)
+    }
+    
+    public func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
+        try send(packetContents: bundle, completion: completion)
+    }
+
+    internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
         guard let group = group, group.state == .ready else {
             throw OSCNetworkingError.notConnected
         }
@@ -100,29 +117,5 @@ public class OSCMulticastClientServer {
                 completion(error)
             }
         }
-    }
-
-    func register(methods: [OSCMethod]) throws {
-        try manager.addressSpace.register(methods: methods)
-    }
-    
-    func register(method: OSCMethod) throws {
-        try manager.addressSpace.register(method: method)
-    }
-
-    func deregister(method: OSCMethod) {
-        manager.addressSpace.deregister(method: method)
-    }
-    
-    func deregisterAll() {
-        manager.addressSpace.removeAll()
-    }
-    
-    func cancel() {
-        group?.cancel()
-    }
-    
-    deinit {
-        cancel()
     }
 }
