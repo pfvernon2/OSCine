@@ -104,7 +104,7 @@ public extension OSCClient {
         connect(endpoint: endpoint)
     }
     
-    func connect(serviceName: String, timeout: TimeInterval?) {
+    func connect(serviceName: String, timeout: TimeInterval? = nil) {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
