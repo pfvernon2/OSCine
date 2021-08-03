@@ -32,16 +32,16 @@ var testMessages: [OSCMessage] = {
     
     let message3 = OSCMessage(address: "/test/mixer/*/button*",
                               arguments: [OSCInt(1), OSCInt(0)])
-
+    
     let message4 = OSCMessage(address: "/test/mixer/*/{label1,label2}",
                               arguments: [OSCString("This is a test")])
-
+    
     let message5 = OSCMessage(address: "//master",
                               arguments: [OSCFloat(0.0)])
     
     let message6 = OSCMessage(address: "//blob",
                               arguments: [OSCBlob(datagram)])
-
+    
     return [message1, message2, message3, message4, message5, message6]
 }()
 
@@ -77,7 +77,7 @@ final class OSCineTests: XCTestCase {
         XCTAssert(path1.oscMethodAddressMatch(pattern: path1_container) == .container)
         XCTAssert(path1.oscMethodAddressMatch(pattern: path1_container2) == .container)
         XCTAssert(path1.oscMethodAddressMatch(pattern: path1_none_end) == .none)
-
+        
         //Test *
         let path2 = "/foobar/fooo/bar"
         let path2_full = "/foobar/fo*/b*r"
@@ -90,7 +90,7 @@ final class OSCineTests: XCTestCase {
         XCTAssert(path2.oscMethodAddressMatch(pattern: path2_none) == .none)
         XCTAssert(path2.oscMethodAddressMatch(pattern: path2_container) == .container)
         XCTAssert(path2.oscMethodAddressMatch(pattern: path2_none_end) == .none)
-
+        
         //Test ? and *
         let path3 = "/foobar/foo1/bar"
         let path3_full = "/foobar/foo?/b*r"
@@ -103,7 +103,7 @@ final class OSCineTests: XCTestCase {
         XCTAssert(path3.oscMethodAddressMatch(pattern: path3_none) == .none)
         XCTAssert(path3.oscMethodAddressMatch(pattern: path3_container) == .container)
         XCTAssert(path3.oscMethodAddressMatch(pattern: path3_none_end) == .none)
-
+        
         //Test []
         let path4 = "/foobar/foo1/bar"
         let path4_full = "/foobar/foo[a-z0-9]/ba[a-z]"
@@ -116,7 +116,7 @@ final class OSCineTests: XCTestCase {
         XCTAssert(path4.oscMethodAddressMatch(pattern: path4_none) == .none)
         XCTAssert(path4.oscMethodAddressMatch(pattern: path4_container) == .container)
         XCTAssert(path4.oscMethodAddressMatch(pattern: path4_none_end) == .none)
-
+        
         //Test {}
         let path5 = "/foobar/foo1/bar"
         let path5_full = "/foobar/{foo,foo1}/bar"
@@ -168,7 +168,7 @@ final class OSCineTests: XCTestCase {
             //convert datagram back to message and confirm it matches original
             let packetMessage = try OSCMessage(packet: packet)
             XCTAssertEqual(packetMessage, message)
-                        
+            
             //Test encode/decode of bundle
             let bundlePacket = try testBundle.createPacket()
             let bundelEncoded = bundlePacket.SLIPEncoded()
@@ -184,41 +184,41 @@ final class OSCineTests: XCTestCase {
     let client = ClientTest()
     func testServerAnnoucementClientUDP() {
         testPrint("Starting UDP Server - Annoucement - Client Test")
-
+        
         let serverExp = expectation(description: "\(#function)")
         serverExp.expectedFulfillmentCount = testBundle.bundleElements?.count ?? .zero
         server.runTest(expectation: serverExp)
         
         let clientExp = expectation(description: "\(#function)")
         client.runTest(expectation: clientExp)
-
+        
         wait(for: [serverExp, clientExp], timeout: 30.0, enforceOrder: false)
         
         server.server.cancel()
     }
-        
+    
     func testServerAnnoucementClientTCP() {
         testPrint("Starting TCP Server - Annoucement - Client Test")
-
+        
         let serverExp = expectation(description: "\(#function)")
         serverExp.expectedFulfillmentCount = testBundle.bundleElements?.count ?? Int.max
         server.runTest(expectation: serverExp, useTCP: true)
         
         let clientExp = expectation(description: "\(#function)")
         self.client.runTest(expectation: clientExp, useTCP: true)
-
+        
         wait(for: [serverExp, clientExp], timeout: 30.0, enforceOrder: false)
         
         server.server.cancel()
-   }
+    }
     
     let mcast = MulticastTest()
     func testMulticast() {
         testPrint("Starting Multicast Test")
-
+        
         let exp = expectation(description: "\(#function)")
         exp.expectedFulfillmentCount = testMessages.count * 2
-
+        
         mcast.runTest(expectation: exp)
         
         wait(for: [exp], timeout: 30.0, enforceOrder: false)
@@ -232,17 +232,17 @@ class MulticastTest: OSCMulticastClientServerDelegate {
         mcast.delegate = self
         return mcast
     }()
-
+    
     func groupStateChange(state: NWConnectionGroup.State) {
         testPrint("state: \(state)")
-
+        
         switch state {
         case .ready:
             send()
-
+            
         case .failed(let error):
             XCTFail(error.localizedDescription)
-
+            
         default:
             break
         }
@@ -257,7 +257,7 @@ class MulticastTest: OSCMulticastClientServerDelegate {
                 $0.expectation = expectation
             }
             try mcast.register(methods: testMethods)
-
+            
             //start listening
             try mcast.listen(on: "224.0.0.251", port: 12345)
             
@@ -297,7 +297,7 @@ class ClientTest: OSCClientDelegate {
         client.delegate = self
         return client
     }()
-
+    
     var useTCP: Bool = false
     var client: OSCClient {
         useTCP ? tcpClient : udpClient
@@ -364,7 +364,7 @@ class ServerTest: OSCServerDelegate {
     func listenerStateChange(state: NWListener.State) {
         testPrint("Server listener state change: \(state)")
     }
-
+    
     func runTest(expectation: XCTestExpectation, useTCP: Bool = false) {
         self.useTCP = useTCP
         do {
@@ -416,7 +416,7 @@ func testPrint(_ items: Any...,
 
 fileprivate extension Data {
     static var hexDigits = Array("0123456789ABCDEF".utf16)
-
+    
     ///Hex representation of the bytes in upper case hex characters
     ///
     /// - Note: You can call lowercased() on the result if you prefer lowercase.

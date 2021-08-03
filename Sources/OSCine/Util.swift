@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Util.swift
 //  
 //
 //  Created by Frank Vernon on 7/4/21.
@@ -33,7 +33,7 @@ extension Data {
     //All OSC data is zero padded modulo 4 bytes
     fileprivate static let kOSCPadValue: UInt8 = 0
     fileprivate static let kOSCPadModulo: Int = 4
-
+    
     //Returns the number of bytes required to pad to the next OSC alignment boundary
     static func OSCPadding(for count: Int) -> Int {
         guard count > .zero else {
@@ -43,12 +43,12 @@ extension Data {
         let padding = count.remainderReportingOverflow(dividingBy: Data.kOSCPadModulo).partialValue
         return padding > .zero ? Data.kOSCPadModulo - padding : .zero
     }
-
+    
     mutating func OSCPad() {
         append(Data(repeating: Data.kOSCPadValue,
                     count: Data.OSCPadding(for: count)))
     }
-
+    
     func OSCPadded() -> Data {
         var result = self
         result.OSCPad()
@@ -59,14 +59,14 @@ extension Data {
 //MARK: - Data Parsing
 
 extension Data {
-    //returns range of next set of null terminated bytes following
-    // the given index, after first walking over any preceeding nulls
+    //Returns range of next set of null terminated bytes following
+    // the given index, after first walking over any leading nulls
     func nextCStr(after start: Data.Index) -> Range<Int>? {
         guard let begins = self[start...].firstIndex(where: { $0 != 0 }),
               let ends = self[begins...].firstIndex(where: { $0 == 0 }) else {
             return nil
         }
-
+        
         return begins..<ends
     }
     
@@ -74,7 +74,7 @@ extension Data {
     // type based on leading char
     func parseOSCPacket() throws -> OSCPacketContents {
         guard let first = first else {
-            throw OSCEncodingError.invalidPacket
+            throw OSCCodingError.invalidPacket
         }
         
         switch Character(UnicodeScalar(first)) {
@@ -85,7 +85,7 @@ extension Data {
             return try OSCMessage(packet: self)
             
         default:
-            throw OSCEncodingError.invalidPacket
+            throw OSCCodingError.invalidPacket
         }
     }
 }
@@ -103,7 +103,10 @@ extension Array {
 //MARK: - NWProtocolUDP
 
 extension NWProtocolUDP {
+    /// Max datagram payload size
+    ///
+    /// - Note:This is the more conservative of the IPv6 and IPv4 sizes for simplicity.
     static var maxDatagramSize: Int = {
-        65507 //Max datagram payload size IPv4 account for headers, etc.
+        65507
     }()
 }

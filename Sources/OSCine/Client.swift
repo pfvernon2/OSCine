@@ -29,7 +29,7 @@ public class OSCClientUDP: OSCClient, NetworkClient {
         return params
     }()
     internal var browser: OSCServiceBrowser? = nil
-
+    
     public init() {}
     deinit {
         connection?.cancel()
@@ -50,10 +50,10 @@ public class OSCClientTCP: OSCClient, NetworkClient {
         tcpOptions.enableKeepalive = true
         tcpOptions.keepaliveIdle = 2
         tcpOptions.noDelay = true
-
+        
         var params: NWParameters = NWParameters(tls: nil, tcp: tcpOptions)
         params.includePeerToPeer = true
-
+        
         //Insert our SLIP protocol framer at the top of the stack
         let SLIPOptions = NWProtocolFramer.Options(definition: SLIPProtocol.definition)
         params.defaultProtocolStack.applicationProtocols.insert(SLIPOptions, at: .zero)
@@ -82,7 +82,7 @@ public protocol OSCClient: AnyObject {
     func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
     func connect(serviceName: String, timeout: TimeInterval?)
     func connect(endpoint: NWEndpoint)
-
+    
     func disconnect()
     
     func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws
@@ -94,7 +94,7 @@ public extension OSCClient {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
-
+        
         client.connection = NWConnection(to: endpoint, using: client.parameters)
         setupConnection()
     }
@@ -108,7 +108,7 @@ public extension OSCClient {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
-
+        
         client.browser = OSCServiceBrowser(serviceType: serviceType, parameters: client.parameters)
         client.browser?.start(timeout: timeout) { [weak self, weak client] results, error in
             guard error == nil else {
@@ -131,7 +131,7 @@ public extension OSCClient {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
-
+        
         client.connection?.cancel()
     }
     
@@ -142,12 +142,12 @@ public extension OSCClient {
     func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
         try send(packetContents: bundle, completion: completion)
     }
-
+    
     internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
-
+        
         guard let connection = client.connection,
               connection.state == .ready else {
             throw OSCNetworkingError.notConnected
@@ -163,7 +163,7 @@ public extension OSCClient {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
-
+        
         guard let connection = client.connection else {
             return
         }

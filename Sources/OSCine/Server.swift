@@ -29,7 +29,7 @@ public class OSCServerUDP: OSCServer, NetworkServer {
         return params
     }()
     internal var manager: OSCConnectionManager = OSCConnectionManager()
-
+    
     public init() {}
     deinit {
         cancel()
@@ -49,7 +49,7 @@ public class OSCServerTCP: OSCServer, NetworkServer {
         let tcpOptions = NWProtocolTCP.Options()
         tcpOptions.enableKeepalive = true
         tcpOptions.keepaliveIdle = 2
-
+        
         //Enable peer to peer and endpoint reuse by default
         var params: NWParameters = NWParameters(tls: nil, tcp: tcpOptions)
         params.includePeerToPeer = true
@@ -93,7 +93,7 @@ public protocol OSCServer: AnyObject {
 public extension OSCServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
         guard let server = self as? NetworkServer else {
-            fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
         }
         
         server.listener = try NWListener(using: server.parameters, on: port)
@@ -132,7 +132,7 @@ public extension OSCServer {
         let server = self as? NetworkServer
         server?.listener?.cancel()
     }
-        
+    
     func register(methods: [OSCMethod]) throws {
         let server = self as? NetworkServer
         try server?.manager.addressSpace.register(methods: methods)
@@ -142,7 +142,7 @@ public extension OSCServer {
         let server = self as? NetworkServer
         try server?.manager.addressSpace.register(method: method)
     }
-
+    
     func deregister(method: OSCMethod) {
         let server = self as? NetworkServer
         server?.manager.addressSpace.deregister(method: method)
@@ -159,7 +159,7 @@ public extension OSCServer {
 internal class OSCConnectionManager {
     var addressSpace = OSCAddressSpace()
     var connections = Array<NWConnection>()
-
+    
     func add(connection: NWConnection) {
         connections.append(connection)
         
@@ -186,14 +186,14 @@ internal class OSCConnectionManager {
     func remove(connection: NWConnection) {
         connections.removeAll { $0 === connection }
     }
-
+    
     func receiveNextMessage(connection: NWConnection) {
         connection.receiveMessage { [weak self] (content, context, isComplete, error) in
             guard error == nil else {
                 OSCNetworkLogger.error("receiveMessage failure: \(error!.localizedDescription)")
                 return
             }
-
+            
             if isComplete, let content = content {
                 do {
                     let packet = try content.parseOSCPacket()

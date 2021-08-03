@@ -19,7 +19,7 @@ public protocol OSCMulticastClientServerDelegate: AnyObject {
 
 public class OSCMulticastClientServer {
     weak public var delegate: OSCMulticastClientServerDelegate? = nil
-
+    
     internal var group: NWConnectionGroup? = nil
     internal var parameters: NWParameters = {
         var params: NWParameters = NWParameters(dtls: nil, udp: NWProtocolUDP.Options())
@@ -32,12 +32,12 @@ public class OSCMulticastClientServer {
     
     internal let sendQueue = DispatchQueue(label: "com.cyberdev.oscmulticastclientserver", qos: .utility)
     internal var sendSemaphore: DispatchSemaphore = DispatchSemaphore(value: 1)
-
+    
     public init() {}
     deinit {
         cancel()
     }
-
+    
     public func listen(on address: NWEndpoint.Host, port: NWEndpoint.Port) throws {
         try listen(on: .hostPort(host: address, port: port))
     }
@@ -71,11 +71,11 @@ public class OSCMulticastClientServer {
         group?.start(queue: .main)
     }
     
-    func cancel() {
+    public func cancel() {
         group?.cancel()
         group = nil
     }
-        
+    
     public func register(methods: [OSCMethod]) throws {
         try manager.addressSpace.register(methods: methods)
     }
@@ -83,7 +83,7 @@ public class OSCMulticastClientServer {
     public func register(method: OSCMethod) throws {
         try manager.addressSpace.register(method: method)
     }
-
+    
     public func deregister(method: OSCMethod) {
         manager.addressSpace.deregister(method: method)
     }
@@ -99,14 +99,14 @@ public class OSCMulticastClientServer {
     public func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
         try send(packetContents: bundle, completion: completion)
     }
-
+    
     internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
         guard let group = group, group.state == .ready else {
             throw OSCNetworkingError.notConnected
         }
-
+        
         let packet = try OSCPacket(packetContents: packetContents)
-
+        
         //queue sends as we potentially block waiting on previous send
         sendQueue.async {
             //Apple recommends serializing group send based on completion

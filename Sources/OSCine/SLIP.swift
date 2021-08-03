@@ -64,7 +64,7 @@ extension Data {
         result.SLIPEncode()
         return result
     }
-
+    
     //Applies SLIP encoding in place on current data
     // Assumes data is single datagram
     mutating func SLIPEncode() {
@@ -105,7 +105,7 @@ extension Data {
         if last == SLIPEscapeCodes.END.rawValue {
             removeLast()
         }
-
+        
         //walk data looking for escape sequences and replacing with unescaped values
         var currentPos: Int = startIndex
         while let nextEscape = range(of: SLIPEscapeCodes.esc, options:[], in: currentPos..<endIndex) {
@@ -138,13 +138,13 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     required init(framer: NWProtocolFramer.Instance) {}
     
     func start(framer: NWProtocolFramer.Instance) -> NWProtocolFramer.StartResult { .ready }
-        
+    
     func wakeup(framer: NWProtocolFramer.Instance) {}
     
     func stop(framer: NWProtocolFramer.Instance) -> Bool { true }
     
     func cleanup(framer: NWProtocolFramer.Instance) {}
-        
+    
     func handleInput(framer: NWProtocolFramer.Instance) -> Int {
         while true {
             var parsedDatagram: Data? = nil
@@ -157,7 +157,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                     //many/most datagrams will be short so ask for more data as quickly as available
                     return .zero
                 }
-
+                
                 //copy data and remove SLIP encoding
                 do {
                     let datagram = Data(buffer[buffer.startIndex...datagramTerminator])
@@ -196,7 +196,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         guard let slipEsc = SLIPEscapeCodes(rawValue: unsafePointer[esc]) else {
                             fatalError("SLIP encode failure")
                         }
-
+                        
                         //write up to, but not including, the character needing escape
                         try framer.writeOutputNoCopy(length: esc)
                         
@@ -204,14 +204,14 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         switch slipEsc {
                         case SLIPEscapeCodes.END:
                             framer.writeOutput(data: SLIPEscapeCodes.endEscape)
-
+                            
                         case SLIPEscapeCodes.ESC:
                             framer.writeOutput(data: SLIPEscapeCodes.escEscape)
-
+                            
                         default:
                             fatalError("Unhandled SLIP escape character encountered")
                         }
-
+                        
                         //skip over encoded char on next iteration
                         return 1
                     } else {

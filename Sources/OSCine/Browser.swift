@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Browser.swift
 //  
 //
 //  Created by Frank Vernon on 7/30/21.
@@ -15,16 +15,17 @@ import Network
 ///This is primarly intended for internal use but may be useful if you want to present
 ///a list of available OSC servers rather than simply connecting to the first available.
 public class OSCServiceBrowser {
-    var serviceType: String
+    private (set) var serviceType: String
+    
     internal var parameters: NWParameters
     internal var browser: NWBrowser?
     internal var browserTimer: Timer?
-
+    
     public init(serviceType: String, parameters: NWParameters) {
         self.serviceType = serviceType
         self.parameters = parameters
     }
-
+    
     deinit {
         cancel()
     }
@@ -42,7 +43,7 @@ public class OSCServiceBrowser {
             case .cancelled:
                 self?.browser = nil
                 self?.cancel()
-
+                
             default:
                 break
             }
