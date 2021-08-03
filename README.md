@@ -16,7 +16,7 @@ Future versions will likely support Swift 5.5 async operations.
 
 ### Why another OSC library in Swift? 
 
-I created this package for my own uses as I found the available open source packages lacking, primarily in their requirements for thirdparty dependencies. Initially I was not planning to release this, however in the process of developing it I found Apples documentation and examples for creating Network Protocol Framers to be shamefully lacking. I felt it was worth contributing this example back to the community simply to make another protocol framer example available. 
+I created this package for my own uses as I found the available open source packages lacking for my purposes. Initially I was not planning to release this, however in the process of developing it I found Apples documentation and examples for creating Network Protocol Framers to be shamefully lacking. I felt it was worth contributing this example back to the community simply to make another protocol framer example available. 
 
 ## OSC
 
@@ -66,7 +66,7 @@ let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                            OSCMessage(address: "/mixer/*/fader*", arguments: [OSCFloat(0.0)]), 
                            OSCMessage(address: "/mixer/*/label*", arguments: [OSCString("")]),
                        ])
-client.send(bundle)
+try client.send(bundle)
 ```
 
 ### Server usage
@@ -106,11 +106,11 @@ let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
 
 let server = OSCServerUDP()
 server.delegate = self //for listener state notifications
-server.register(methods: [mixerMainMute, 
+try server.register(methods: [mixerMainMute, 
                           mixerMainSolo, 
                           mixerMainFader, 
                           mixerMainLabel])
-server.listen(serviceName: "MyMixer")
+try server.listen(serviceName: "MyMixer")
 ```
 
 ### Multicast
@@ -133,7 +133,7 @@ let mixerMainMute = MyMethod(address: "/mixer/main/mute1"")
 let mixerMainSolo = MyMethod(address: "/mixer/main/solo1"")
 let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
 let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
-mcast.register(methods: [mixerMainMute, 
+try mcast.register(methods: [mixerMainMute, 
                           mixerMainSolo, 
                           mixerMainFader, 
                           mixerMainLabel])
@@ -147,5 +147,5 @@ let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
                            OSCMessage(address: "/mixer/*/fader*", arguments: [OSCFloat(0.0)]), 
                            OSCMessage(address: "/mixer/*/label*", arguments: [OSCString("")]),
                        ])
-mcast.send(bundle)
+try mcast.send(bundle)
 ```
