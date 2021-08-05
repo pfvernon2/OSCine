@@ -61,8 +61,8 @@ public class OSCMulticastClientServer {
         
         group?.setReceiveHandler(maximumMessageSize: NWProtocolUDP.maxDatagramSize,
                                  rejectOversizedMessages: true) { [weak self] (message, content, isComplete) in
-            if isComplete, let content = content, let packet = try? content.parseOSCPacket() {
-                self?.manager.addressSpace.dispatch(packet: packet)
+            if isComplete, let content = content, let element = try? content.parseOSCPacket() {
+                self?.manager.addressSpace.dispatch(element: element)
             } else if let connection = message.extractConnection() {
                 self?.manager.add(connection: connection)
             }
@@ -93,19 +93,19 @@ public class OSCMulticastClientServer {
     }
     
     public func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws {
-        try send(packetContents: message, completion: completion)
+        try send(element: message, completion: completion)
     }
     
     public func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
-        try send(packetContents: bundle, completion: completion)
+        try send(element: bundle, completion: completion)
     }
     
-    internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
+    internal func send(element: OSCBundleElement, completion: @escaping (NWError?)->Swift.Void) throws {
         guard let group = group, group.state == .ready else {
             throw OSCNetworkingError.notConnected
         }
         
-        let packet = try OSCPacket(packetContents: packetContents)
+        let packet = try element.packet()
         
         //queue sends as we potentially block waiting on previous send
         sendQueue.async {

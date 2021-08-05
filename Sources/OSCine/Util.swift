@@ -72,7 +72,7 @@ extension Data {
     
     //Attempts to decode data to appropriate OSCPacketContents
     // type based on leading char
-    func parseOSCPacket() throws -> OSCPacketContents {
+    func parseOSCPacket() throws -> OSCBundleElement {
         guard let first = first else {
             throw OSCCodingError.invalidPacket
         }

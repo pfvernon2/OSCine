@@ -37,7 +37,7 @@ As a user of this package you should expect to interact with the various classes
 
 * OSCClientUDP/OSCClientTCP & OSCClientDelegate
 * OSCMessage & OSCBundle
-* OSCArgument Implementations
+* OSCAddressPattern & OSCArgument
 
 If you are building an OSC client you will need to insantiate one of the `OSCClientUDP` or `OSCClientTCP` classes. Additionally you will need to implement a class conforming to `OSCClientDelegate` in order to monitor the network state change information.
 
@@ -61,10 +61,11 @@ client.connect(serviceName: "MyMixer", timeout: 10.0)
 
 let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
-                           OSCMessage(address: "/mixer/*/mute*", arguments: [OSCBool(true)]), 
-                           OSCMessage(address: "/mixer/*/solo*", arguments: [OSCBool(false)]),
-                           OSCMessage(address: "/mixer/*/fader*", arguments: [OSCFloat(0.0)]), 
-                           OSCMessage(address: "/mixer/*/label*", arguments: [OSCString("")]),
+                           OSCMessage(address: "/mixer/*/mute*", arguments: [.true]), 
+                           OSCMessage(address: "/mixer/*/solo*", arguments: [.false]),
+                           OSCMessage(address: "/mixer/*/fader*", arguments: [.float(0.0)]), 
+                           OSCMessage(address: "/mixer/*/eq*", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
+                           OSCMessage(address: "/mixer/*/label*", arguments: [.string("")]),
                        ])
 try client.send(bundle)
 ```
@@ -73,7 +74,7 @@ try client.send(bundle)
 
 * OSCServerUDP/OSCServerTCP & OSCServerDelegate
 * OSCMethod & OSCMessage
-* OSCArgument Implementations
+* OSCAddressPattern & OSCArgument
 
 If you are building an OSC server you will need to insantiate one of the `OSCServerUDP` or `OSCServerTCP` classes. Additionally you will need to implement a class conforming to `OSCServerDelegate` in order to monitor the network state change information.
 
@@ -102,14 +103,16 @@ class MyMethod: OSCMethod {
 let mixerMainMute = MyMethod(address: "/mixer/main/mute1")
 let mixerMainSolo = MyMethod(address: "/mixer/main/solo1")
 let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
+let mixerMainEQ = MyMethod(address: "/mixer/main/eq1")
 let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
 
 let server = OSCServerUDP()
 server.delegate = self //for listener state notifications
 try server.register(methods: [mixerMainMute, 
-                          mixerMainSolo, 
-                          mixerMainFader, 
-                          mixerMainLabel])
+                              mixerMainSolo, 
+                              mixerMainFader, 
+                              mixerMainEQ, 
+                              mixerMainLabel])
 try server.listen(serviceName: "MyMixer")
 ```
 
@@ -117,7 +120,7 @@ try server.listen(serviceName: "MyMixer")
 
 * OSCMulticastClientServer & OSCMulticastClientServerDelegate
 * OSCMethod & OSCMessage & OSCBundle
-* OSCArgument Implementations
+* OSCAddressPattern & OSCArgument
 
 While not detailed in the OSC specification a number of implementations allow for multicast send and receive of OSC messages and bundles. This is implemented in OSCine as a combination client and server class `OSCMulticastClientServer` which allows for simultaneous send and receive of OSC messages and bundles via a single multicast address and port. This combination design also allows for easy synchronization of OSC methods both within your app and with other devices on the network.
 
@@ -132,20 +135,23 @@ mcast.delegate = self //for group state notifications
 let mixerMainMute = MyMethod(address: "/mixer/main/mute1"")
 let mixerMainSolo = MyMethod(address: "/mixer/main/solo1"")
 let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
+let mixerMainEQ = MyMethod(address: "/mixer/main/eq1")
 let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
 try mcast.register(methods: [mixerMainMute, 
-                          mixerMainSolo, 
-                          mixerMainFader, 
-                          mixerMainLabel])
+                             mixerMainSolo, 
+                             mixerMainFader, 
+                             mixerMainEQ,
+                             mixerMainLabel])
 try mcast.listen(on: "224.0.0.251", port: 12345)
 
 //Send bundle to all in the multicast group, including ourselves
 let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
                        bundleElements: [
-                           OSCMessage(address: "/mixer/*/mute*", arguments: [OSCBool(true)]), 
-                           OSCMessage(address: "/mixer/*/solo*", arguments: [OSCBool(false)]),
-                           OSCMessage(address: "/mixer/*/fader*", arguments: [OSCFloat(0.0)]), 
-                           OSCMessage(address: "/mixer/*/label*", arguments: [OSCString("")]),
+                            OSCMessage(address: "/mixer/*/mute*", arguments: [.true]), 
+                            OSCMessage(address: "/mixer/*/solo*", arguments: [.false]),
+                            OSCMessage(address: "/mixer/*/fader*", arguments: [.float(0.0)]), 
+                            OSCMessage(address: "/mixer/*/eq*", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
+                            OSCMessage(address: "/mixer/*/label*", arguments: [.string("")]),
                        ])
 try mcast.send(bundle)
 ```

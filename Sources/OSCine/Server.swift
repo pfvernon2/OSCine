@@ -196,8 +196,8 @@ internal class OSCConnectionManager {
             
             if isComplete, let content = content {
                 do {
-                    let packet = try content.parseOSCPacket()
-                    self?.addressSpace.dispatch(packet: packet)
+                    let element = try content.parseOSCPacket()
+                    self?.addressSpace.dispatch(element: element)
                 } catch {
                     OSCNetworkLogger.error("OSCPacket decode failure: \(error.localizedDescription)")
                 }

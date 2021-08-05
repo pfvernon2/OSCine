@@ -136,14 +136,14 @@ public extension OSCClient {
     }
     
     func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws {
-        try send(packetContents: message, completion: completion)
+        try send(element: message, completion: completion)
     }
     
     func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws {
-        try send(packetContents: bundle, completion: completion)
+        try send(element: bundle, completion: completion)
     }
     
-    internal func send(packetContents: OSCPacketContents, completion: @escaping (NWError?)->Swift.Void) throws {
+    internal func send(element: OSCBundleElement, completion: @escaping (NWError?)->Swift.Void) throws {
         guard let client = self as? NetworkClient else {
             fatalError("Adoption of OSCClient requires additional adoptance of NetworkClient")
         }
@@ -153,7 +153,7 @@ public extension OSCClient {
             throw OSCNetworkingError.notConnected
         }
         
-        let packet = try OSCPacket(packetContents: packetContents)
+        let packet = try element.packet()
         connection.send(content: packet, completion: .contentProcessed( { error in
             completion(error)
         }))
