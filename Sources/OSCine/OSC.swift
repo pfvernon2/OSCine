@@ -69,8 +69,93 @@ public enum OSCArgument: Equatable, Hashable {
     public init(_ timeTag: OSCTimeTag) {
         self = .timetag(timeTag)
     }
+    
+    public enum TypeTag: Character {
+        //1.0
+        case int = "i"
+        case float = "f"
+        case string = "s"
+        case blob = "b"
+        
+        //1.1
+        case `true` = "T"
+        case `false` = "F"
+        case null = "N"
+        case impulse = "I"
+        case timetag = "t"
+    }
+    
+    public var tag: TypeTag {
+        switch self {
+        case .int(_):
+            return .int
+        case .float(_):
+            return .float
+        case .string(_):
+            return .string
+        case .blob(_):
+            return .blob
+        case .true:
+            return .true
+        case .false:
+            return .false
+        case .null:
+            return .null
+        case .impulse:
+            return .impulse
+        case .timetag(_):
+            return .timetag
+        }
+    }
 }
+
+//MARK: - OSCArgumentArray
+
 public typealias OSCArgumentArray = Array<OSCArgument>
+extension OSCArgumentArray {
+    public func tags() -> OSCArgumentTypeTagArray {
+        reduce(into: OSCArgumentTypeTagArray(capacity: count)) {
+            $0.append($1.tag)
+        }
+    }
+
+    public func values(matching tags: OSCArgumentTypeTagArray) throws -> [Any?] {
+        guard self.tags() == tags else {
+            throw OSCCodingError.invalidArgumentList
+        }
+        
+        return values()
+    }
+    
+    public func values() -> [Any?] {
+        return reduce(into: [Any?]()) {
+            switch $1 {
+            case .int(let value):
+                $0.append(value)
+            case .float(let value):
+                $0.append(value)
+            case .string(let value):
+                $0.append(value)
+            case .blob(let value):
+                $0.append(value)
+            case .true:
+                $0.append(true)
+            case .false:
+                $0.append(false)
+            case .null:
+                $0.append(nil)
+            case .impulse:
+                $0.append(OSCArgument.TypeTag.impulse)
+            case .timetag(let value):
+                $0.append(value)
+            }
+        }
+    }
+}
+
+public typealias OSCArgumentTypeTagArray = Array<OSCArgument.TypeTag>
+
+//MARK: - OSCTimeTag
 
 public struct OSCTimeTag: Codable, Equatable, Comparable, Hashable {
     public var seconds: UInt32
@@ -193,7 +278,7 @@ public class OSCMessage: OSCBundleElement {
         var currPos = tagData.startIndex
         
         //parse tag data based on tag type definition
-        let types = try OSCArgumentTagArray.from(string: tagTypes)
+        let types = try OSCArgumentTypeTagArray.from(string: tagTypes)
         let argArray = try types.map { type in
             try OSCArgument(tag: type, data: tagData, at: &currPos)
         }
@@ -221,7 +306,7 @@ public class OSCMessage: OSCBundleElement {
     /// a message has the expected arguments before attempting to query
     /// thier values.
     public func argumentsMatch(_ types: OSCArgumentArray) -> Bool {
-        return arguments?.typeTags() == types.typeTags()
+        return arguments?.tags() == types.tags()
     }
     
     public func packet() throws -> Data {
@@ -406,14 +491,8 @@ extension OSCBundle: Equatable {
 //MARK: - OSCArgumentArray
 
 extension OSCArgumentArray {
-    func typeTags() -> OSCArgumentTagArray {
-        reduce(into: OSCArgumentTagArray(capacity: count)) {
-            $0.append($1.tag)
-        }
-    }
-    
     func OSCEncode() throws -> Data {
-        let data = try typeTags().OSCEncode()
+        let data = try tags().OSCEncode()
         return try reduce(into: data) {
             $0.append(try $1.encode())
         }
@@ -438,30 +517,7 @@ extension OSCArgumentArray {
 }
 
 internal extension OSCArgument {
-    var tag: OSCArgumentTag {
-        switch self {
-        case .int(_):
-            return .int
-        case .float(_):
-            return .float
-        case .string(_):
-            return .string
-        case .blob(_):
-            return .blob
-        case .true:
-            return .true
-        case .false:
-            return .false
-        case .null:
-            return .null
-        case .impulse:
-            return .impulse
-        case .timetag(_):
-            return .timetag
-        }
-    }
-
-    init(tag: OSCArgumentTag, data: Data, at offset: inout Data.Index) throws {
+    init(tag: OSCArgument.TypeTag, data: Data, at offset: inout Data.Index) throws {
         switch tag {
         case .int:
             self = .int(try Int32.OSCDecode(data: data, at: &offset))
@@ -524,36 +580,12 @@ internal extension OSCArgument {
     }
 }
 
-enum OSCArgumentTag: Character {
-    //1.0
-    case int = "i"
-    case float = "f"
-    case string = "s"
-    case blob = "b"
-    
-    //1.1
-    case `true` = "T"
-    case `false` = "F"
-    case null = "N"
-    case impulse = "I"
-    case timetag = "t"
-}
+//MARK: - OSCArgumentTag
 
-extension OSCArgumentTag {
-    var tagData: Data {
-        guard let intValue: UInt8 = self.rawValue.asciiValue else {
-            fatalError("Fatal error rendering OSC tag data")
-        }
-        
-        return Data([intValue])
-    }
-}
-
-typealias OSCArgumentTagArray = Array<OSCArgumentTag>
-extension OSCArgumentTagArray {
+extension OSCArgumentTypeTagArray {
     fileprivate static var kOSCTagTypePrefix: Character = ","
     fileprivate static var prefixData: Data = {
-        guard let tagData = OSCArgumentTagArray.kOSCTagTypePrefix.asciiValue else {
+        guard let tagData = OSCArgumentTypeTagArray.kOSCTagTypePrefix.asciiValue else {
             fatalError("Fatal error rending tag data")
         }
         return Data([tagData])
@@ -564,15 +596,19 @@ extension OSCArgumentTagArray {
             throw OSCCodingError.invalidArgumentList
         }
         
-        return reduce(into: OSCArgumentTagArray.prefixData) {
-            $0.append($1.tagData)
+        return reduce(into: OSCArgumentTypeTagArray.prefixData) {
+            guard let intValue: UInt8 = $1.rawValue.asciiValue else {
+                fatalError("Fatal error rendering OSC tag data")
+            }
+
+            $0.append(intValue)
         }.OSCPadded()
     }
     
-    static func from(string: String) throws -> OSCArgumentTagArray {
-        try string.reduce(into: OSCArgumentTagArray(capacity: string.count)) {
+    static func from(string: String) throws -> OSCArgumentTypeTagArray {
+        try string.reduce(into: OSCArgumentTypeTagArray(capacity: string.count)) {
             if $1 == kOSCTagTypePrefix { return }
-            guard let type = OSCArgumentTag(rawValue: $1) else {
+            guard let type = OSCArgument.TypeTag(rawValue: $1) else {
                 throw OSCCodingError.invalidArgumentList
             }
             

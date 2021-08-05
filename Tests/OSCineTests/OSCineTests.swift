@@ -225,66 +225,6 @@ final class OSCineTests: XCTestCase {
     }
 }
 
-class MulticastTest: OSCMulticastClientServerDelegate {
-    var expectation: XCTestExpectation? = nil
-    lazy var mcast: OSCMulticastClientServer = {
-        let mcast = OSCMulticastClientServer()
-        mcast.delegate = self
-        return mcast
-    }()
-    
-    func groupStateChange(state: NWConnectionGroup.State) {
-        testPrint("state: \(state)")
-        
-        switch state {
-        case .ready:
-            send()
-            
-        case .failed(let error):
-            XCTFail(error.localizedDescription)
-            
-        default:
-            break
-        }
-    }
-    
-    func runTest(expectation: XCTestExpectation) {
-        self.expectation = expectation
-        
-        do {
-            //add expectation to methods and register
-            testMethods.forEach {
-                $0.expectation = expectation
-            }
-            try mcast.register(methods: testMethods)
-            
-            //start listening
-            try mcast.listen(on: "224.0.0.251", port: 12345)
-            
-            testPrint("Multicast Test Started")
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-    
-    func send() {
-        do {
-            //send messages serially to test queueing
-            try testMessages.forEach {
-                testPrint("Sending multicast message: \(String(describing: $0.addressPattern))")
-                try mcast.send($0) { error in
-                    if let error = error {
-                        XCTFail(error.localizedDescription)
-                    }
-                    self.expectation?.fulfill()
-                }
-            }
-        } catch {
-            XCTFail(error.localizedDescription)
-        }
-    }
-}
-
 class ClientTest: OSCClientDelegate {
     lazy var udpClient: OSCClientUDP = {
         let client = OSCClientUDP()
@@ -400,6 +340,66 @@ class MethodTest: OSCMethod {
                   "method: \(addressPattern)",
                   "arguments: \(String(describing: message.arguments))")
         expectation?.fulfill()
+    }
+}
+
+class MulticastTest: OSCMulticastClientServerDelegate {
+    var expectation: XCTestExpectation? = nil
+    lazy var mcast: OSCMulticastClientServer = {
+        let mcast = OSCMulticastClientServer()
+        mcast.delegate = self
+        return mcast
+    }()
+    
+    func groupStateChange(state: NWConnectionGroup.State) {
+        testPrint("state: \(state)")
+        
+        switch state {
+        case .ready:
+            send()
+            
+        case .failed(let error):
+            XCTFail(error.localizedDescription)
+            
+        default:
+            break
+        }
+    }
+    
+    func runTest(expectation: XCTestExpectation) {
+        self.expectation = expectation
+        
+        do {
+            //add expectation to methods and register
+            testMethods.forEach {
+                $0.expectation = expectation
+            }
+            try mcast.register(methods: testMethods)
+            
+            //start listening
+            try mcast.listen(on: "224.0.0.251", port: 12345)
+            
+            testPrint("Multicast Test Started")
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+    
+    func send() {
+        do {
+            //send messages serially to test queueing
+            try testMessages.forEach {
+                testPrint("Sending multicast message: \(String(describing: $0.addressPattern))")
+                try mcast.send($0) { error in
+                    if let error = error {
+                        XCTFail(error.localizedDescription)
+                    }
+                    self.expectation?.fulfill()
+                }
+            }
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
     }
 }
 
