@@ -70,6 +70,7 @@ public enum OSCArgument: Equatable, Hashable {
         self = .timetag(timeTag)
     }
     
+    //OSC defined tag values for the corresponding argument types
     public enum TypeTag: Character {
         //1.0
         case int = "i"
@@ -117,14 +118,23 @@ extension OSCArgumentArray {
         map { $0.tag }
     }
 
-    public func values(matching tags: OSCArgumentTypeTagArray) throws -> [Any?] {
+    ///Returns array of values if they match exactly the given array of type tags.
+    ///This is useful to validate arguments to a message and retrieve the values in one step.
+    ///
+    ///~~~
+    ///guard let values = message.arguments?.values(matching: [.float, .float, .timetag]) else {
+    ///    return
+    ///}
+    ///~~~
+    public func values(matching tags: OSCArgumentTypeTagArray) -> [Any?]? {
         guard self.tags() == tags else {
-            throw OSCCodingError.invalidArgumentList
+            return nil
         }
         
         return values()
     }
     
+    ///Returns the values of the arguments as heterogenous array
     public func values() -> [Any?] {
         map {
             switch $0 {

@@ -406,7 +406,7 @@ class MulticastTest: OSCMulticastClientServerDelegate {
 //MARK: - Utility
 
 func testPrint(_ items: Any...,
-               separator: String = .comma,
+               separator: String = ", ",
                terminator: String = .newline,
                prefix: String = String.test) {
     print(prefix, terminator: .space)

@@ -7,7 +7,7 @@ The design goals for this package are:
 * Minimal public interface
 * No third party dependencies
 * Close adherance to OSC v1.1 protcol
-* Support for TCP, UDP, and Multicast
+* Integrated TCP, UDP, and Multicast support
 * Integrated Bonjour advertisement and browsing
 * Integrated OSLog support
 * SLIP support via Apple Network Protocol Framer
