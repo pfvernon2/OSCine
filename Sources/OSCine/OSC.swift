@@ -114,9 +114,7 @@ public enum OSCArgument: Equatable, Hashable {
 public typealias OSCArgumentArray = Array<OSCArgument>
 extension OSCArgumentArray {
     public func tags() -> OSCArgumentTypeTagArray {
-        reduce(into: OSCArgumentTypeTagArray(capacity: count)) {
-            $0.append($1.tag)
-        }
+        map { $0.tag }
     }
 
     public func values(matching tags: OSCArgumentTypeTagArray) throws -> [Any?] {
@@ -128,26 +126,26 @@ extension OSCArgumentArray {
     }
     
     public func values() -> [Any?] {
-        return reduce(into: [Any?]()) {
-            switch $1 {
+        map {
+            switch $0 {
             case .int(let value):
-                $0.append(value)
+                return value
             case .float(let value):
-                $0.append(value)
+                return value
             case .string(let value):
-                $0.append(value)
+                return value
             case .blob(let value):
-                $0.append(value)
+                return value
             case .true:
-                $0.append(true)
+                return true
             case .false:
-                $0.append(false)
+                return false
             case .null:
-                $0.append(nil)
+                return nil
             case .impulse:
-                $0.append(OSCArgument.TypeTag.impulse)
+                return OSCArgument.TypeTag.impulse
             case .timetag(let value):
-                $0.append(value)
+                return value
             }
         }
     }
@@ -492,8 +490,7 @@ extension OSCBundle: Equatable {
 
 extension OSCArgumentArray {
     func OSCEncode() throws -> Data {
-        let data = try tags().OSCEncode()
-        return try reduce(into: data) {
+        try reduce(into: try tags().OSCEncode()) {
             $0.append(try $1.encode())
         }
     }
@@ -837,8 +834,8 @@ internal extension OSCAddressSpace {
     }
     
     func methodsMatching(pattern: String) -> Array<(OSCPatternMatchType, OSCMethod)> {
-        reduce(into: Array<(OSCPatternMatchType, OSCMethod)>()) {
-            $0.append(($1.addressMatch(pattern: pattern), $1))
+        map {
+            ($0.addressMatch(pattern: pattern), $0)
         }.filter {$0.0 != .none}
     }
 }
