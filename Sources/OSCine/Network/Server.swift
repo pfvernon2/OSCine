@@ -108,7 +108,7 @@ public extension OSCServer {
         server.listener?.stateUpdateHandler = { [weak self, weak server] (state) in
             switch state {
             case .failed(let error):
-                OSCNetworkLogger.debug("Listener failed: \(error.debugDescription)")
+                OSCLogDebug("Listener failed: \(error.debugDescription)")
                 fallthrough
             case .cancelled:
                 server?.manager.cancelAll()
@@ -122,11 +122,11 @@ public extension OSCServer {
         }
         
         server.listener?.newConnectionHandler = { [weak server] (connection) in
-            OSCNetworkLogger.debug("Received connection from: \(connection.debugDescription)")
+            OSCLogDebug("Received connection from: \(connection.debugDescription)")
             server?.manager.add(connection: connection)
         }
         
-        OSCNetworkLogger.debug("Starting listener: \(server.listener?.debugDescription ?? "?")")
+        OSCLogDebug("Starting listener: \(server.listener?.debugDescription ?? "?")")
         server.listener?.start(queue: .main)
     }
     
@@ -182,7 +182,7 @@ internal class OSCConnectionManager {
                 self?.receiveNextMessage(connection: connection)
                 
             case .failed(let error):
-                OSCNetworkLogger.debug("\(connection.debugDescription) failed: \(error.debugDescription)")
+                OSCLogDebug("\(connection.debugDescription) failed: \(error.debugDescription)")
                 fallthrough
             case .cancelled:
                 self?.remove(connection: connection)
@@ -192,7 +192,7 @@ internal class OSCConnectionManager {
             }
         }
         
-        OSCNetworkLogger.debug("Starting connection from: \(connection.debugDescription)")
+        OSCLogDebug("Starting connection from: \(connection.debugDescription)")
         connection.start(queue: .main)
     }
     
@@ -203,7 +203,7 @@ internal class OSCConnectionManager {
     func receiveNextMessage(connection: NWConnection) {
         connection.receiveMessage { [weak self] (content, context, isComplete, error) in
             guard error == nil else {
-                OSCNetworkLogger.error("receiveMessage failure: \(error!.localizedDescription)")
+                OSCLogError("receiveMessage failure: \(error!.localizedDescription)")
                 return
             }
             
@@ -212,7 +212,7 @@ internal class OSCConnectionManager {
                     let element = try content.parseOSCPacket()
                     self?.addressSpace.dispatch(element: element)
                 } catch {
-                    OSCNetworkLogger.error("OSCPacket decode failure: \(error.localizedDescription)")
+                    OSCLogError("OSCPacket decode failure: \(error.localizedDescription)")
                 }
             }
             

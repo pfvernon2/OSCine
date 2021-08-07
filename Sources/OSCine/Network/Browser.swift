@@ -36,7 +36,7 @@ public class OSCServiceBrowser {
         browser?.stateUpdateHandler = { [weak self] newState in
             switch newState {
             case .failed(let error):
-                OSCNetworkLogger.debug("Browser failed: \(error.localizedDescription)")
+                OSCLogDebug("Browser failed: \(error.localizedDescription)")
                 self?.cancel()
                 updates(nil, error)
                 
@@ -55,7 +55,7 @@ public class OSCServiceBrowser {
         }
         
         // Start browsing and ask for updates on the main queue.
-        OSCNetworkLogger.debug("Starting browser for: \(self.browser?.debugDescription ?? "?")")
+        OSCLogDebug("Starting browser for: \(self.browser?.debugDescription ?? "?")")
         browser?.start(queue: .main)
         
         //start the browser timer if requested

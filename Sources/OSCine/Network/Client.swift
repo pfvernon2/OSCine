@@ -173,7 +173,7 @@ public extension OSCClient {
         connection.stateUpdateHandler = { [weak self, weak client] (state) in
             switch state {
             case .failed(let error):
-                OSCNetworkLogger.debug("\(connection.debugDescription) failed: \(error.debugDescription)")
+                OSCLogDebug("\(connection.debugDescription) failed: \(error.debugDescription)")
                 fallthrough
             case .cancelled:
                 client?.connection = nil
@@ -185,7 +185,7 @@ public extension OSCClient {
             self?.delegate?.connectionStateChange(state)
         }
         
-        OSCNetworkLogger.debug("Starting connection to: \(connection.debugDescription)")
+        OSCLogDebug("Starting connection to: \(connection.debugDescription)")
         connection.start(queue: .main)
     }
 }

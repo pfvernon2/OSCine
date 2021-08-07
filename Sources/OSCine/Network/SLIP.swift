@@ -163,7 +163,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                     let datagram = Data(buffer[buffer.startIndex...datagramTerminator])
                     parsedDatagram = try datagram.SLIPDecoded()
                 } catch {
-                    OSCNetworkLogger.error("SLIPProtocol message decode failure: \(error.localizedDescription)")
+                    OSCLogError("SLIPProtocol message decode failure: \(error.localizedDescription)")
                 }
                 
                 //even if we fail parsing return data as consumed since we can't process it
@@ -223,7 +223,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         return .zero
                     }
                 } catch {
-                    OSCNetworkLogger.error("SLIPProtocol message encode failure: \(error.localizedDescription)")
+                    OSCLogError("SLIPProtocol message encode failure: \(error.localizedDescription)")
                     return .zero
                 }
             }

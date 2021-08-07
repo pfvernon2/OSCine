@@ -7,7 +7,6 @@
 
 import Foundation
 import Network
-import OSLog
 
 //MARK: - Definitions
 
@@ -27,13 +26,6 @@ public enum OSCCodingError: Error {
     case invalidPacket
     case invalidAddress
 }
-
-//MARK: - Logging
-
-internal var OSCNetworkLogger: Logger = {
-    Logger(subsystem: "com.cyberdev.OSCine",
-           category: "network")
-}()
 
 //MARK: - Data Padding
 
