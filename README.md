@@ -47,7 +47,7 @@ In order to send OSC messages via your client instantiate one or both of the `OS
 
 The `addressPattern` is either a literal representation of the path to which you want to send a message to a `method` or `container` on the server, or it may be a descriptive "wildcard" represenation of the path, i.e. `/path/to/control` or `/path/*/control`. There are a number of wildcard options which may be combined in a variety of ways. Please refer to OSC specfication for details on wildcard usage and limitations.
 
-The `arguments` are an ordered array of objects conforming to the `OSCArgument` protocol. OSC 1.1 supports a specific set of argument types which are represted in OSCine as: `OSCInt, OSCFloat, OSCBool, OSCString, OSCBlob, OSCNull, OSCImpulse, and OSCTimeTag`
+The `arguments` are an ordered array of enumeration values as defined by `OSCArgument`.
 
 The following is a minimaly functional UDP based OSC client with Bonjour service discovery:
 ```
