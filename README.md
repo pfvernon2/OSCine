@@ -17,7 +17,7 @@ Future versions will likely support Swift 5.5 async operations.
 
 ## OSC
 
-OSCine follows the OSC specification closely and relies upon terminology from the OSC spec heavily throughout. If you are not familar with OSC and its paradigms it is strongly suggested that you review them before proceeding: 
+OSCine follows the OSC v1.1 specification closely and relies upon terminology from the OSC spec heavily throughout. If you are not familar with OSC and its paradigms it is strongly suggested that you review them before proceeding: 
 
 #### Overview:
 	http://cnmat.org/OpenSoundControl/OSC-spec.html
@@ -34,7 +34,7 @@ OSCine follows the OSC specification closely and relies upon terminology from th
 * OSCMessage & OSCBundle
 * OSCAddressPattern & OSCArgument
 
-If you are building an OSC client you will need to insantiate one of the `OSCClientUDP` or `OSCClientTCP` classes. Additionally you will need to implement a class conforming to `OSCClientDelegate` in order to monitor the network state change information.
+If you are developing an OSC client you will need to insantiate one of the `OSCClientUDP` or `OSCClientTCP` classes. Additionally you will need to implement a class conforming to `OSCClientDelegate` in order to monitor the network state change information.
 
 To begin sending messages from your client call  `client.connect()` with either a specific address and port or the name of the Bonjour service to browse for. By default the standard OSC service types `_osc._udp` and `_osc._tcp` are used for browsing but this can be set to any custom service type you may care to use. 
 
@@ -71,15 +71,15 @@ try client.send(bundle)
 * OSCMethod & OSCMessage
 * OSCAddressPattern & OSCArgument
 
-If you are building an OSC server you will need to insantiate one of the `OSCServerUDP` or `OSCServerTCP` classes. Additionally you will need to implement a class conforming to `OSCServerDelegate` in order to monitor the network state change information.
+If you are developing an OSC server you will need to insantiate one of the `OSCServerUDP` or `OSCServerTCP` classes. Additionally you will need to implement a class conforming to `OSCServerDelegate` in order to monitor the network state change information.
 
 To begin receiving messages call `server.listen()` with a specific port and/or the name to advertise as your Bonjour service. 
 
-> *Note -* If you are relying upon Bonjour for client browsing it is advised *not* to specify a port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. 
+> *Note -* If you are relying upon Bonjour for client browsing it is advised you *not* to specify a port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. 
 
-In order to process OSC messages you will need to register one or more classes conforming to the protocol `OSCMethod` on your server instance. To implement a method you will need to provide at a minimium an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. 
+In order to process OSC messages you will need to register one or more classes conforming to the protocol `OSCMethod` on your server instance. To implement a method you will need to provide, at a minimium, an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. 
 
-Optionally you can supply a pattern of argument types to `requiredArguments` which can be used to validate that messages have the required data. Your handleMessage function will not be called in the event of an argument mismatch.
+Optionally you can supply a pattern of argument types to `requiredArguments` which can be used to validate that messages have the required arguments prior to being delivered to your `handleMessage` function.
 
 The following is a minimaly functional UDP based OSC server with Bonjour service advertisement:
 ```
@@ -87,8 +87,8 @@ class MyMethod: OSCMethod {
     var addressPattern: OSCAddressPattern
     var requiredArguments: OSCArgumentTypeTagArray? = nil
 
-    init(address: OSCAddressPattern, requiredArguments: OSCArgumentTypeTagArray? = nil) {
-        self.addressPattern = address
+    init(addressPattern: OSCAddressPattern, requiredArguments: OSCArgumentTypeTagArray? = nil) {
+        self.addressPattern = addressPattern
     }
     
     func handleMessage(_ message: OSCMessage, for match: OSCPatternMatchType) {
@@ -98,11 +98,11 @@ class MyMethod: OSCMethod {
     }
 }
 
-let mixerMainMute = MyMethod(address: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
-let mixerMainSolo = MyMethod(address: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
-let mixerMainFader = MyMethod(address: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
-let mixerMainEQ = MyMethod(address: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
-let mixerMainLabel = MyMethod(address: "/mixer/main/label", requiredArguments: [.anyTag])
+let mixerMainMute = MyMethod(addressPattern: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
+let mixerMainSolo = MyMethod(addressPattern: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
+let mixerMainFader = MyMethod(addressPattern: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
+let mixerMainEQ = MyMethod(addressPattern: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
+let mixerMainLabel = MyMethod(addressPattern: "/mixer/main/label", requiredArguments: [.anyTag])
 
 let server = OSCServerUDP()
 server.delegate = self //for listener state notifications
@@ -130,11 +130,11 @@ let mcast = OSCMulticastClientServer()
 mcast.delegate = self //for group state notifications
 
 //Begin receiving and dispatching messages to methods
-let mixerMainMute = MyMethod(address: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
-let mixerMainSolo = MyMethod(address: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
-let mixerMainFader = MyMethod(address: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
-let mixerMainEQ = MyMethod(address: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
-let mixerMainLabel = MyMethod(address: "/mixer/main/label", requiredArguments: [.anyTag])
+let mixerMainMute = MyMethod(addressPattern: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
+let mixerMainSolo = MyMethod(addressPattern: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
+let mixerMainFader = MyMethod(addressPattern: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
+let mixerMainEQ = MyMethod(addressPattern: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
+let mixerMainLabel = MyMethod(addressPattern: "/mixer/main/label", requiredArguments: [.anyTag])
 try mcast.register(methods: [mixerMainMute, 
                              mixerMainSolo, 
                              mixerMainFader, 
