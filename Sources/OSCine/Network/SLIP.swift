@@ -131,7 +131,7 @@ extension Data {
 //MARK: - Protocol Framer
 
 //Protocol Framer Implementation of SLIP Protocol
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 class SLIPProtocol: NWProtocolFramerImplementation {
     static let definition = NWProtocolFramer.Definition(implementation: SLIPProtocol.self)
     static var label: String { "SLIP" }
@@ -241,7 +241,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     }
 }
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 extension NWProtocolFramer.Message {
     convenience init(message: OSCMessage) {
         self.init(definition: SLIPProtocol.definition)

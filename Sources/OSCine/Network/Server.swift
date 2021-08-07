@@ -11,14 +11,14 @@ import Network
 //MARK: - OSCServerDelegate
 
 ///Delegate for notifications of network state change of the listener
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public protocol OSCServerDelegate: AnyObject {
     func listenerStateChange(state: NWListener.State)
 }
 
 //MARK: - OSCServer
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public protocol OSCServer: AnyObject {
     var delegate: OSCServerDelegate? { get set }
     var serviceType: String { get set }
@@ -36,7 +36,7 @@ public protocol OSCServer: AnyObject {
 //MARK: - OSCServerUDP
 
 ///UDP based OSC server
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public class OSCServerUDP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeUDP
@@ -58,7 +58,7 @@ public class OSCServerUDP: OSCServer, NetworkServer {
 //MARK: - OSCServerTCP
 
 ///TCP based OSC server
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public class OSCServerTCP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeTCP
@@ -90,14 +90,14 @@ public class OSCServerTCP: OSCServer, NetworkServer {
 
 //MARK: - OSCNetworkServer protocol
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 internal protocol NetworkServer: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
 }
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public extension OSCServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
         guard let server = self as? NetworkServer else {
@@ -175,7 +175,7 @@ public extension OSCServer {
 
 //MARK: - OSCConnectionManager
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 internal class OSCConnectionManager {
     var addressSpace = OSCAddressSpace()
     var connections = Array<NWConnection>()

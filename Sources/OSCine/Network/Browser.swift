@@ -14,7 +14,7 @@ import Network
 ///
 ///This is primarly intended for internal use but may be useful if you want to present
 ///a list of available OSC servers rather than simply defaulting to the first available.
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 public class OSCServiceBrowser {
     private (set) var serviceType: String
     
@@ -78,10 +78,10 @@ public class OSCServiceBrowser {
 
 //MARK: - NWBrowserResultSet
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 typealias NWBrowserResultSet = Set<NWBrowser.Result>
 
-@available(watchOS 6.0, *)
+@available(watchOS 7.0, *)
 extension NWBrowserResultSet {
     //Utility to return first instance of service matching requested service name
     func firstMatch(serviceName: String) -> NWBrowser.Result? {
