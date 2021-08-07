@@ -121,6 +121,7 @@ public extension OSCClient {
         client.browser?.start(timeout: timeout) { [weak self, weak client] results, error in
             guard error == nil else {
                 client?.browser?.cancel()
+                //force unwrap protected by guard
                 self?.delegate?.connectionStateChange(.failed(error!))
                 return
             }

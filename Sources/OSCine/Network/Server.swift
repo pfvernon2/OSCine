@@ -210,6 +210,7 @@ internal class OSCConnectionManager {
     func receiveNextMessage(connection: NWConnection) {
         connection.receiveMessage { [weak self] (content, context, isComplete, error) in
             guard error == nil else {
+                //force unwrap protected by guard
                 OSCLogError("receiveMessage failure: \(error!.localizedDescription)")
                 return
             }

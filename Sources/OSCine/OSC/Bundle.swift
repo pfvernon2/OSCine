@@ -22,7 +22,7 @@ public typealias OSCBundleElementArray = Array<OSCBundleElement>
 ///A Bundle is a collection of Messages and potentially other Bundles.
 public class OSCBundle: OSCBundleElement {
     static let kOSCBundleIdentifier = "#bundle"
-    static let kOSCBundlePrefix: Character = kOSCBundleIdentifier.first!
+    static let kOSCBundlePrefix: Character = "#"
 
     public var timeTag: OSCTimeTag? = nil
     public var elements: OSCBundleElementArray? = nil

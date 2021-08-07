@@ -63,7 +63,7 @@ public class OSCServiceBrowser {
         if let timeout = timeout {
             browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
                 self?.cancel()
-                updates(nil, NWError.posix(POSIXErrorCode(rawValue: ETIMEDOUT)!))
+                updates(nil, NWError.posix(POSIXErrorCode.ETIMEDOUT))
             }
             browserTimer?.tolerance = 0.25
         }
