@@ -46,10 +46,10 @@ public class OSCMessage: OSCBundleElement {
         arguments = argArray
     }
 
-    public convenience init(address: OSCAddressPattern, arguments: OSCArgumentArray) {
+    public convenience init(addressPattern: OSCAddressPattern, arguments: OSCArgumentArray) {
         self.init()
         
-        self.addressPattern = address
+        self.addressPattern = addressPattern
         self.arguments = arguments
     }
     

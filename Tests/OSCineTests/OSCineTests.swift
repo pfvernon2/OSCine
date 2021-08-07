@@ -5,7 +5,7 @@ import XCTest
 
 let mcastAddressEndpoint: NWEndpoint = .hostPort(host: "239.65.11.3", port: 65113)
 
-let message = OSCMessage(address: "/i/T/f/F",
+let message = OSCMessage(addressPattern: "/i/T/f/F",
                          arguments:[
                             .int(1),
                             .boolean(true),
@@ -24,22 +24,22 @@ let SLIPDatagram = Data([10, SLIPEscapeCodes.ESC.rawValue, SLIPEscapeCodes.ESC_E
 let OSCTestServiceName = "OSCine_Test"
 
 var testMessages: [OSCMessage] = {
-    let message1 = OSCMessage(address: "/test/mixer/*/knob[0-9]",
+    let message1 = OSCMessage(addressPattern: "/test/mixer/*/knob[0-9]",
                               arguments: [.float(0.75)])
     
-    let message2 = OSCMessage(address: "/test/mixer/*/slider?",
+    let message2 = OSCMessage(addressPattern: "/test/mixer/*/slider?",
                               arguments: [.float(0.75)])
     
-    let message3 = OSCMessage(address: "/test/mixer/*/button*",
+    let message3 = OSCMessage(addressPattern: "/test/mixer/*/button*",
                               arguments: [.int(1), .int(0)])
     
-    let message4 = OSCMessage(address: "/test/mixer/*/{label1,label2}",
+    let message4 = OSCMessage(addressPattern: "/test/mixer/*/{label1,label2}",
                               arguments: [.string("This is a test")])
     
-    let message5 = OSCMessage(address: "//master",
+    let message5 = OSCMessage(addressPattern: "//master",
                               arguments: [.boolean(true)])
     
-    let message6 = OSCMessage(address: "//blob",
+    let message6 = OSCMessage(addressPattern: "//blob",
                               arguments: [.blob(datagram)])
     
     return [message1, message2, message3, message4, message5, message6]
