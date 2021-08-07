@@ -11,12 +11,14 @@ import Network
 //MARK: - OSCMulticastClientServerDelegate
 
 ///Delegate for notifications of network state change of the mulitcast client server
+@available(watchOS 6.0, *)
 public protocol OSCMulticastClientServerDelegate: AnyObject {
     func groupStateChange(state: NWConnectionGroup.State)
 }
 
 //MARK: - OSCMulticastClientServer
 
+@available(watchOS 6.0, *)
 public class OSCMulticastClientServer {
     weak public var delegate: OSCMulticastClientServerDelegate? = nil
     
@@ -122,6 +124,7 @@ public class OSCMulticastClientServer {
 
 //MARK: - NWProtocolUDP
 
+@available(watchOS 6.0, *)
 extension NWProtocolUDP {
     /// Max datagram payload size
     ///

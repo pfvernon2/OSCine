@@ -11,12 +11,14 @@ import Network
 //MARK: - OSCClientDelegate
 
 ///Delegate for notifications of network state change of the client
+@available(watchOS 6.0, *)
 public protocol OSCClientDelegate: AnyObject {
     func connectionStateChange(_ state: NWConnection.State)
 }
 
 //MARK: - OSCClient
 
+@available(watchOS 6.0, *)
 public protocol OSCClient: AnyObject {
     var delegate: OSCClientDelegate? { get set }
     var serviceType: String { get set }
@@ -34,6 +36,7 @@ public protocol OSCClient: AnyObject {
 //MARK: - OSCClientUDP
 
 ///UDP based OSC client
+@available(watchOS 6.0, *)
 public class OSCClientUDP: OSCClient, NetworkClient {
     weak public var delegate: OSCClientDelegate? = nil
     public var serviceType: String = kOSCServiceTypeUDP
@@ -55,6 +58,7 @@ public class OSCClientUDP: OSCClient, NetworkClient {
 //MARK: - OSCClientTCP
 
 ///TCP based OSC client
+@available(watchOS 6.0, *)
 public class OSCClientTCP: OSCClient, NetworkClient {
     weak public var delegate: OSCClientDelegate? = nil
     public var serviceType: String = kOSCServiceTypeTCP
@@ -85,12 +89,14 @@ public class OSCClientTCP: OSCClient, NetworkClient {
 
 //MARK: - OSCNetworkClient Protocol
 
+@available(watchOS 6.0, *)
 internal protocol NetworkClient: AnyObject {
     var connection: NWConnection? { get set }
     var parameters: NWParameters { get set }
     var browser: OSCServiceBrowser? { get set }
 }
 
+@available(watchOS 6.0, *)
 public extension OSCClient {
     func connect(endpoint: NWEndpoint) {
         guard let client = self as? NetworkClient else {
