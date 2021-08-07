@@ -168,19 +168,19 @@ extension OSCArgumentArray {
         }
         
         //check if we have trailing optionals in the pattern…
-        // if not just compare required elements
+        // if not just compare all as required elements
         guard let firstOptional = pattern.firstIndexOfOptional() else {
             return argTags.elementsEqual(pattern) { $0.matches($1) }
         }
         
-        //check tags up to the trailing optionals
+        //check required tags, i.e. all tags up to the trailing optionals
         let requiredArgs = argTags[..<Swift.min(firstOptional, argTags.endIndex)]
         let requiredPattern = pattern[..<firstOptional]
         guard requiredArgs.elementsEqual(requiredPattern, by: {$0.matches($1)}) else {
             return false
         }
         
-        //compare remaining optionals up to the number of remaining args…
+        //compare optionals up to the number of remaining args…
         // optionals past the end can be assumed to match
         // the filter addresses the case where there are non-optionals in the tail
         // which we don't support

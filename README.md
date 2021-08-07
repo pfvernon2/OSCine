@@ -4,17 +4,16 @@ OSCine is a simple robust Swift client and server implementation of Open Sound C
 
 The design goals for this package are:
 * Ease of use
-* Minimal public interface
 * No third party dependencies
 * Close adherance to OSC v1.1 specification
-* Integrated TCP, UDP, and Multicast support
-* Integrated Bonjour advertisement and browsing
+* Integrated TCP, UDP, and Multicast network support*
+* Integrated Bonjour advertisement and browsing support
 * Integrated OSLog support
 * SLIP support via Apple Network Protocol Framer
 
 Future versions will likely support Swift 5.5 async operations.
 
-While OSCine has fully integrated network support full access to packet creation and parsing is available so that other transport mechanisms could be utilized if desired. 
+* While OSCine has fully integrated network support full access to packet creation and parsing is available so that other transport mechanisms could be utilized if desired. 
 
 ## OSC
 
@@ -29,9 +28,7 @@ OSCine follows the OSC specification closely and relies upon terminology from th
 
 ## Usage
 
-As a user of this package you should expect to interact with the various classes differently based upon your use case: Client, Server, or Multicast.
-
-### Client usage
+### Client
 
 * OSCClientUDP/OSCClientTCP & OSCClientDelegate
 * OSCMessage & OSCBundle
@@ -68,7 +65,7 @@ let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
 try client.send(bundle)
 ```
 
-### Server usage
+### Server
 
 * OSCServerUDP/OSCServerTCP & OSCServerDelegate
 * OSCMethod & OSCMessage
