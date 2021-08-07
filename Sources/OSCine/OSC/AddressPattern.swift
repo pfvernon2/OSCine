@@ -34,13 +34,15 @@ extension OSCAddressPattern {
         }()
     }
     
+    //Check for leading part delim and ensure no reserved chars used
     public func isValid() -> Bool {
         first == OSCAddressPattern.kOSCPartDelim
             && reserved.reservedCharSet.isDisjoint(with: CharacterSet(charactersIn: self))
     }
 }
 
-//This is the meat of the address wildcard pattern matching. Sorry it is so ugly.
+//This is the meat of the address wildcard pattern matching. Sorry it is so ugly,
+// but it's complicated and I wanted to make it easy to support later.
 extension OSCAddressPattern {
     //Theory of operation...
     //  Walk the pattern and address char by char matching chars based on
@@ -52,7 +54,7 @@ extension OSCAddressPattern {
         
         func addressInc(_ count: Int = 1) {
             //note: this is potentially unsafe - may walk past end
-            // we are in theory protected by logic used below
+            // but we are in theory protected by logic used below
             addressPos = index(addressPos, offsetBy: count)
         }
         
@@ -168,7 +170,7 @@ extension OSCAddressPattern {
                 
             case "*": //Match Any
                 //match zero or more chars, except segment termination or end of address
-                // /foo/bar* would match: /foo/bar1111 or /foo/bar, but not /foo/bar/1111
+                // /foo/bar* would match: /foo/bar or /foo/bar1111, but not /foo/bar/1111
                 patternInc()
                 while let current = currAddressChar(),
                       current != OSCAddressPattern.kOSCPartDelim,
@@ -176,22 +178,24 @@ extension OSCAddressPattern {
                     addressInc()
                 }
                 
-            case "[": //Match single from range
-                //match any single char based on the set of characters expressed in the brackets,
+            case "[": //Match any from set or range of chars
+                //match zero or more chars based on the set of characters expressed within the brackets,
                 // except segment termination or end of address
-                // i.e. there must be at least one more char before
-                // the segment termination or end of address:
-                // /foo/bar[1-2] would match: /foo/bar1, but not /foo/bar/1 or /foo/bar
-                guard let current = currAddressChar(), current != OSCAddressPattern.kOSCPartDelim,
-                      let (inverted, charray) = bracketCharSet(),
-                      charray.contains(current) != inverted else {
+                // /foo/bar[1-2] would match: /foo/bar1 and /foo/bar12 or /foo/bar, but not /foo/bar/1
+                guard let (inverted, charray) = bracketCharSet() else {
                     addressPos = endIndex
                     patternPos = startPattern
                     break patternLoop
                 }
                 
+                while let current = currAddressChar(),
+                      current != OSCAddressPattern.kOSCPartDelim,
+                      current != currPatternChar(),
+                      charray.contains(current) != inverted {
+                    addressInc()
+                }
+
                 //bracketCharSet() increments the patternPos for us
-                addressInc()
                 
             case "{": //Match string from list
                 //match (sub)string in segment based on set of strings in the parens,

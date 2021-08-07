@@ -103,7 +103,7 @@ public class OSCBundle: OSCBundleElement {
 }
 
 extension OSCBundleElementArray {
-    static func == (lhs: OSCBundleElementArray, rhs: OSCBundleElementArray) -> Bool {
+    public static func == (lhs: OSCBundleElementArray, rhs: OSCBundleElementArray) -> Bool {
         lhs.elementsEqual(rhs) {
             do {
                 let left = try $0.packet()

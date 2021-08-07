@@ -6,7 +6,7 @@ The design goals for this package are:
 * Ease of use
 * Minimal public interface
 * No third party dependencies
-* Close adherance to OSC v1.1 protcol
+* Close adherance to OSC v1.1 specification
 * Integrated TCP, UDP, and Multicast support
 * Integrated Bonjour advertisement and browsing
 * Integrated OSLog support

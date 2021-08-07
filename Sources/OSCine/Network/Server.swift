@@ -15,6 +15,22 @@ public protocol OSCServerDelegate: AnyObject {
     func listenerStateChange(state: NWListener.State)
 }
 
+//MARK: - OSCServer
+
+public protocol OSCServer: AnyObject {
+    var delegate: OSCServerDelegate? { get set }
+    var serviceType: String { get set }
+
+    func listen(on port: NWEndpoint.Port, serviceName: String?) throws
+    func cancel()
+    
+    func register(method: OSCMethod) throws
+    func register(methods: [OSCMethod]) throws
+    
+    func deregister(method: OSCMethod)
+    func deregisterAll()
+}
+
 //MARK: - OSCServerUDP
 
 ///UDP based OSC server
@@ -74,20 +90,6 @@ internal protocol NetworkServer: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
-}
-
-public protocol OSCServer: AnyObject {
-    var delegate: OSCServerDelegate? { get set }
-    var serviceType: String { get set }
-
-    func listen(on port: NWEndpoint.Port, serviceName: String?) throws
-    func cancel()
-    
-    func register(method: OSCMethod) throws
-    func register(methods: [OSCMethod]) throws
-    
-    func deregister(method: OSCMethod)
-    func deregisterAll()
 }
 
 public extension OSCServer {

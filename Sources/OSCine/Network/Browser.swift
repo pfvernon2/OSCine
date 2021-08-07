@@ -13,7 +13,7 @@ import Network
 ///Simple Bonjour browser with optional timeout.
 ///
 ///This is primarly intended for internal use but may be useful if you want to present
-///a list of available OSC servers rather than simply connecting to the first available.
+///a list of available OSC servers rather than simply defaulting to the first available.
 public class OSCServiceBrowser {
     private (set) var serviceType: String
     

@@ -123,40 +123,6 @@ extension OSCArgumentArray {
         map { $0.tag }
     }
     
-    ///Matches the given pattern of type tags to the array of arguments
-    public func matches(pattern: OSCArgumentTypeTagArray) -> Bool {
-        let argTags = tags()
-        
-        //quick check: ensure we have at least as many pattern elements (some of which may be optional)
-        // as we have argument elements
-        guard pattern.count >= argTags.count else {
-            return false
-        }
-        
-        //check if we have trailing optionals in the pattern…
-        // if not just compare required elements
-        guard let firstOptional = pattern.firstIndexOfOptional() else {
-            return argTags.elementsEqual(pattern) { $0.matches($1) }
-        }
-        
-        //check tags up to the trailing optionals
-        let requiredArgs = argTags[..<Swift.min(firstOptional, argTags.endIndex)]
-        let requiredPattern = pattern[..<firstOptional]
-        guard requiredArgs.elementsEqual(requiredPattern, by: {$0.matches($1)}) else {
-            return false
-        }
-        
-        //compare remaining optionals up to the number of args…
-        // optionals past the end can be assumed to match
-        // the filter addresses the case where there are non-optionals in the tail
-        let patternOptionals = pattern[firstOptional..<argTags.endIndex].filter {
-            guard case .optional(_) = $0 else { return false }
-            return true
-        }
-        let argOptionals = argTags[firstOptional...]
-        return argOptionals.elementsEqual(patternOptionals) { $0.matches($1) }
-    }
-
     ///Returns heterogenous array of values only if they match the given array of type tags.
     ///This is useful to both validate arguments and retrieve their values in a single step.
     public func values(matching pattern: OSCArgumentTypeTagArray) -> [Any?]? {
@@ -189,6 +155,41 @@ extension OSCArgumentArray {
                 return value
             }
         }
+    }
+    
+    ///Check if the given pattern matches the array of arguments
+    public func matches(pattern: OSCArgumentTypeTagArray) -> Bool {
+        let argTags = tags()
+        
+        //quick check: ensure we have at least as many pattern elements (some of which may be optional)
+        // as we have argument elements
+        guard pattern.count >= argTags.count else {
+            return false
+        }
+        
+        //check if we have trailing optionals in the pattern…
+        // if not just compare required elements
+        guard let firstOptional = pattern.firstIndexOfOptional() else {
+            return argTags.elementsEqual(pattern) { $0.matches($1) }
+        }
+        
+        //check tags up to the trailing optionals
+        let requiredArgs = argTags[..<Swift.min(firstOptional, argTags.endIndex)]
+        let requiredPattern = pattern[..<firstOptional]
+        guard requiredArgs.elementsEqual(requiredPattern, by: {$0.matches($1)}) else {
+            return false
+        }
+        
+        //compare remaining optionals up to the number of remaining args…
+        // optionals past the end can be assumed to match
+        // the filter addresses the case where there are non-optionals in the tail
+        // which we don't support
+        let patternOptionals = pattern[firstOptional..<argTags.endIndex].filter {
+            guard case .optional(_) = $0 else { return false }
+            return true
+        }
+        let argOptionals = argTags[firstOptional...]
+        return argOptionals.elementsEqual(patternOptionals) { $0.matches($1) }
     }
 }
 
@@ -406,31 +407,7 @@ extension OSCTimeTag: OSCCodable {
     }
 }
 
-extension OSCArgumentArray {
-    func OSCEncode() throws -> Data {
-        try reduce(into: try tags().OSCEncode()) {
-            $0.append(try $1.encode())
-        }
-    }
-    
-    static func == (lhs: OSCArgumentArray, rhs: OSCArgumentArray) -> Bool {
-        print(lhs, rhs)
-        //do quick check for tags matching to possibly avoid encoding data
-        guard lhs.elementsEqual(rhs, by: { $0.tag == $1.tag}) else {
-            return false
-        }
-
-        return lhs.elementsEqual(rhs) {
-            do {
-                let left = try $0.encode()
-                let right = try $1.encode()
-                return left == right
-            } catch {
-                return false
-            }
-        }
-    }
-}
+//MARK: - OSCArgument internal
 
 internal extension OSCArgument {
     init(tag: OSCArgument.TypeTag, data: Data, at offset: inout Data.Index) throws {
@@ -490,6 +467,62 @@ internal extension OSCArgument {
     }
 }
 
+//MARK: - OSCArgumentArray internal
+
+extension OSCArgumentArray {
+    func OSCEncode() throws -> Data {
+        try reduce(into: try tags().OSCEncode()) {
+            $0.append(try $1.encode())
+        }
+    }
+    
+    static func == (lhs: OSCArgumentArray, rhs: OSCArgumentArray) -> Bool {
+        print(lhs, rhs)
+        //do quick check for tags matching to possibly avoid encoding data
+        guard lhs.elementsEqual(rhs, by: { $0.tag == $1.tag}) else {
+            return false
+        }
+
+        return lhs.elementsEqual(rhs) {
+            do {
+                let left = try $0.encode()
+                let right = try $1.encode()
+                return left == right
+            } catch {
+                return false
+            }
+        }
+    }
+}
+
+//MARK: - OSCArgument.TypeTag internal
+
+//Extension to map OSC type tag characters to/from enum
+extension OSCArgument.TypeTag {
+    fileprivate static var OSCTypeTagCharacters: Array<Character> {
+        ["i", "f", "s", "b", "T", "F", "N", "I", "T"]
+    }
+    fileprivate static var ArgumentCases: [OSCArgument.TypeTag] {
+        [.int, .float, .string, .blob, .true, .false, .null, .impulse, .timetag]
+    }
+    
+    var asciiValue : UInt8? {
+        guard let index = Self.ArgumentCases.firstIndex(of: self) else {
+            return nil
+        }
+        return Self.OSCTypeTagCharacters[index].asciiValue
+    }
+    
+    init?(char: Character) {
+        guard let index = Self.OSCTypeTagCharacters.firstIndex(of: char) else {
+            return nil
+        }
+        self = Self.ArgumentCases[index]
+    }
+}
+
+//MARK: - OSCArgumentTypeTagArray internal
+
 extension OSCArgumentTypeTagArray {
     fileprivate static var kOSCTagTypePrefix: Character = ","
     fileprivate static var prefixData: Data = {
@@ -529,29 +562,5 @@ extension OSCArgumentTypeTagArray {
             guard case .optional(_) = $0 else { return false }
             return true
         }
-    }
-}
-
-//Extension to map OSC type tag characters to/from enum
-extension OSCArgument.TypeTag {
-    fileprivate static var OSCTypeTagCharacters: Array<Character> {
-        ["i", "f", "s", "b", "T", "F", "N", "I", "T"]
-    }
-    fileprivate static var ArgumentCases: [OSCArgument.TypeTag] {
-        [.int, .float, .string, .blob, .true, .false, .null, .impulse, .timetag]
-    }
-    
-    var asciiValue : UInt8? {
-        guard let index = Self.ArgumentCases.firstIndex(of: self) else {
-            return nil
-        }
-        return Self.OSCTypeTagCharacters[index].asciiValue
-    }
-    
-    init?(char: Character) {
-        guard let index = Self.OSCTypeTagCharacters.firstIndex(of: char) else {
-            return nil
-        }
-        self = Self.ArgumentCases[index]
     }
 }

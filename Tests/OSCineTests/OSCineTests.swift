@@ -105,15 +105,15 @@ final class OSCineTests: XCTestCase {
         XCTAssert(path3.match(pattern: path3_none_end) == .none)
         
         //Test []
-        let path4 = "/foobar/foo1/bar"
+        let path4 = "/foobar/foo123/bar"
         let path4_full = "/foobar/foo[a-z0-9]/ba[a-z]"
-        let path4_none = "/foobar/foo1[a-z0-9]/bar"
+        let path4_full2 = "/foobar/foo1[a-z0-9]/bar"
         let path4_container = "/foobar/fo?[a-z0-9]"
-        let path4_none_end = "/foobar/foo?/bar[a-z0-9]"
+        let path4_none_end = "/foobar/foo?/ba[0-9]"
         XCTAssert(path4.isValid())
         XCTAssert(!path4_full.isValid())
         XCTAssert(path4.match(pattern: path4_full) == .full)
-        XCTAssert(path4.match(pattern: path4_none) == .none)
+        XCTAssert(path4.match(pattern: path4_full2) == .full)
         XCTAssert(path4.match(pattern: path4_container) == .container)
         XCTAssert(path4.match(pattern: path4_none_end) == .none)
         

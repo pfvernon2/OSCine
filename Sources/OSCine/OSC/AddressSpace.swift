@@ -89,8 +89,6 @@ public extension OSCAddressSpace {
     }
     
     var methodDescriptions: [String] {
-        map {
-            $0.description
-        }
+        map { $0.description }
     }
 }

@@ -185,6 +185,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     
     func handleOutput(framer: NWProtocolFramer.Instance, message: NWProtocolFramer.Message, messageLength: Int, isComplete: Bool) {
         while true {
+            //many/most messages will be short so ask for more data as quickly as available
             let more = framer.parseOutput(minimumIncompleteLength: 1, maximumLength: Int.max) { unsafePointer, complete in
                 guard let unsafePointer = unsafePointer, unsafePointer.count > .zero else {
                     return .zero
@@ -197,10 +198,10 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                             fatalError("SLIP encode failure")
                         }
                         
-                        //write up to, but not including, the character needing escape
+                        //write up to, but not including, the character needing escape without copying data
                         try framer.writeOutputNoCopy(length: esc)
                         
-                        //send the escape sequence for the char needing escape
+                        //send the associated escape sequence
                         switch slipEsc {
                         case SLIPEscapeCodes.END:
                             framer.writeOutput(data: SLIPEscapeCodes.endEscape)
@@ -213,6 +214,8 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         }
                         
                         //skip over encoded char on next iteration
+                        // note: writeOutputNoCopy() advances the data position for us
+                        //       so only indicate the data we need to skip over here
                         return 1
                     } else {
                         //nothing to escpape - send this entire portion of the message
