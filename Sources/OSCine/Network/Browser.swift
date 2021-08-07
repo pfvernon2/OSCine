@@ -80,6 +80,8 @@ public class OSCServiceBrowser {
 
 @available(watchOS 6.0, *)
 typealias NWBrowserResultSet = Set<NWBrowser.Result>
+
+@available(watchOS 6.0, *)
 extension NWBrowserResultSet {
     //Utility to return first instance of service matching requested service name
     func firstMatch(serviceName: String) -> NWBrowser.Result? {
