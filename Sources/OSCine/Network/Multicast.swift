@@ -119,3 +119,14 @@ public class OSCMulticastClientServer {
         }
     }
 }
+
+//MARK: - NWProtocolUDP
+
+extension NWProtocolUDP {
+    /// Max datagram payload size
+    ///
+    /// - Note:This is the more conservative of the IPv6 and IPv4 sizes for simplicity.
+    static var maxDatagramSize: Int = {
+        65507
+    }()
+}

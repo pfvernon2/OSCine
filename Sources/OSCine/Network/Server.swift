@@ -79,7 +79,7 @@ internal protocol NetworkServer: AnyObject {
 public protocol OSCServer: AnyObject {
     var delegate: OSCServerDelegate? { get set }
     var serviceType: String { get set }
-    
+
     func listen(on port: NWEndpoint.Port, serviceName: String?) throws
     func cancel()
     
@@ -129,28 +129,39 @@ public extension OSCServer {
     }
     
     func cancel() {
-        let server = self as? NetworkServer
-        server?.listener?.cancel()
+        guard let server = self as? NetworkServer else {
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
+        }
+        
+        server.listener?.cancel()
     }
     
     func register(methods: [OSCMethod]) throws {
-        let server = self as? NetworkServer
-        try server?.manager.addressSpace.register(methods: methods)
+        guard let server = self as? NetworkServer else {
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
+        }
+        
+        try server.manager.addressSpace.register(methods: methods)
     }
     
     func register(method: OSCMethod) throws {
-        let server = self as? NetworkServer
-        try server?.manager.addressSpace.register(method: method)
+        try register(methods: [method])
     }
     
     func deregister(method: OSCMethod) {
-        let server = self as? NetworkServer
-        server?.manager.addressSpace.deregister(method: method)
+        guard let server = self as? NetworkServer else {
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
+        }
+        
+        server.manager.addressSpace.deregister(method: method)
     }
     
     func deregisterAll() {
-        let server = self as? NetworkServer
-        server?.manager.addressSpace.removeAll()
+        guard let server = self as? NetworkServer else {
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
+        }
+        
+        server.manager.addressSpace.removeAll()
     }
 }
 

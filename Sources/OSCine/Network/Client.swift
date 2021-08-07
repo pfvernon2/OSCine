@@ -15,6 +15,22 @@ public protocol OSCClientDelegate: AnyObject {
     func connectionStateChange(_ state: NWConnection.State)
 }
 
+//MARK: - OSCClient
+
+public protocol OSCClient: AnyObject {
+    var delegate: OSCClientDelegate? { get set }
+    var serviceType: String { get set }
+    
+    func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
+    func connect(serviceName: String, timeout: TimeInterval?)
+    func connect(endpoint: NWEndpoint)
+    
+    func disconnect()
+    
+    func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws
+    func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws
+}
+
 //MARK: - OSCClientUDP
 
 ///UDP based OSC client
@@ -73,20 +89,6 @@ internal protocol NetworkClient: AnyObject {
     var connection: NWConnection? { get set }
     var parameters: NWParameters { get set }
     var browser: OSCServiceBrowser? { get set }
-}
-
-public protocol OSCClient: AnyObject {
-    var delegate: OSCClientDelegate? { get set }
-    var serviceType: String { get set }
-    
-    func connect(host: NWEndpoint.Host, port: NWEndpoint.Port)
-    func connect(serviceName: String, timeout: TimeInterval?)
-    func connect(endpoint: NWEndpoint)
-    
-    func disconnect()
-    
-    func send(_ message: OSCMessage, completion: @escaping (NWError?)->Swift.Void) throws
-    func send(_ bundle: OSCBundle, completion: @escaping (NWError?)->Swift.Void) throws
 }
 
 public extension OSCClient {

@@ -8,9 +8,9 @@ let mcastAddressEndpoint: NWEndpoint = .hostPort(host: "239.65.11.3", port: 6511
 let message = OSCMessage(address: "/i/T/f/F",
                          arguments:[
                             .int(1),
-                            .true,
+                            .boolean(true),
                             .float(2.0),
-                            .false
+                            .boolean(false)
                          ])
 let messageHex = "2F692F542F662F46000000002C695466460000000000000140000000"
 
@@ -37,7 +37,7 @@ var testMessages: [OSCMessage] = {
                               arguments: [.string("This is a test")])
     
     let message5 = OSCMessage(address: "//master",
-                              arguments: [.float(0.0)])
+                              arguments: [.boolean(true)])
     
     let message6 = OSCMessage(address: "//blob",
                               arguments: [.blob(datagram)])
@@ -52,12 +52,12 @@ var testBundle: OSCBundle = {
 
 var testMethods: [MethodTest] = {
     var result = [MethodTest](capacity: 5)
-    result.append(MethodTest(address: "/test/mixer/1/knob8"))
+    result.append(MethodTest(address: "/test/mixer/1/knob8", requiredArguments: [.float]))
     result.append(MethodTest(address: "/test/mixer/1/slider1"))
-    result.append(MethodTest(address: "/test/mixer/1/button3"))
-    result.append(MethodTest(address: "/test/mixer/1/label1"))
-    result.append(MethodTest(address: "/test/mixer/1/master/eq1/lowShelf"))
-    result.append(MethodTest(address: "/test/mixer/1/blob/data"))
+    result.append(MethodTest(address: "/test/mixer/1/button3", requiredArguments: [.int, .optional(.int)]))
+    result.append(MethodTest(address: "/test/mixer/1/label1", requiredArguments: [.string]))
+    result.append(MethodTest(address: "/test/mixer/1/master/eq1/bypass", requiredArguments: [.anyBoolean]))
+    result.append(MethodTest(address: "/test/mixer/1/blob/data", requiredArguments: [.blob]))
     return result
 }()
 
@@ -72,11 +72,11 @@ final class OSCineTests: XCTestCase {
         let path1_none_end = "/foobar/foo/bar?"
         XCTAssert(path1.isValid())
         XCTAssert(!path1_full.isValid())
-        XCTAssert(path1.oscMethodAddressMatch(pattern: path1_full) == .full)
-        XCTAssert(path1.oscMethodAddressMatch(pattern: path1_none) == .none)
-        XCTAssert(path1.oscMethodAddressMatch(pattern: path1_container) == .container)
-        XCTAssert(path1.oscMethodAddressMatch(pattern: path1_container2) == .container)
-        XCTAssert(path1.oscMethodAddressMatch(pattern: path1_none_end) == .none)
+        XCTAssert(path1.match(pattern: path1_full) == .full)
+        XCTAssert(path1.match(pattern: path1_none) == .none)
+        XCTAssert(path1.match(pattern: path1_container) == .container)
+        XCTAssert(path1.match(pattern: path1_container2) == .container)
+        XCTAssert(path1.match(pattern: path1_none_end) == .none)
         
         //Test *
         let path2 = "/foobar/fooo/bar"
@@ -86,10 +86,10 @@ final class OSCineTests: XCTestCase {
         let path2_none_end = "/foobar/f*/bar/1*"
         XCTAssert(path2.isValid())
         XCTAssert(!path2_full.isValid())
-        XCTAssert(path2.oscMethodAddressMatch(pattern: path2_full) == .full)
-        XCTAssert(path2.oscMethodAddressMatch(pattern: path2_none) == .none)
-        XCTAssert(path2.oscMethodAddressMatch(pattern: path2_container) == .container)
-        XCTAssert(path2.oscMethodAddressMatch(pattern: path2_none_end) == .none)
+        XCTAssert(path2.match(pattern: path2_full) == .full)
+        XCTAssert(path2.match(pattern: path2_none) == .none)
+        XCTAssert(path2.match(pattern: path2_container) == .container)
+        XCTAssert(path2.match(pattern: path2_none_end) == .none)
         
         //Test ? and *
         let path3 = "/foobar/foo1/bar"
@@ -99,10 +99,10 @@ final class OSCineTests: XCTestCase {
         let path3_none_end = "/foobar/foo?/ba"
         XCTAssert(path3.isValid())
         XCTAssert(!path3_full.isValid())
-        XCTAssert(path3.oscMethodAddressMatch(pattern: path3_full) == .full)
-        XCTAssert(path3.oscMethodAddressMatch(pattern: path3_none) == .none)
-        XCTAssert(path3.oscMethodAddressMatch(pattern: path3_container) == .container)
-        XCTAssert(path3.oscMethodAddressMatch(pattern: path3_none_end) == .none)
+        XCTAssert(path3.match(pattern: path3_full) == .full)
+        XCTAssert(path3.match(pattern: path3_none) == .none)
+        XCTAssert(path3.match(pattern: path3_container) == .container)
+        XCTAssert(path3.match(pattern: path3_none_end) == .none)
         
         //Test []
         let path4 = "/foobar/foo1/bar"
@@ -112,10 +112,10 @@ final class OSCineTests: XCTestCase {
         let path4_none_end = "/foobar/foo?/bar[a-z0-9]"
         XCTAssert(path4.isValid())
         XCTAssert(!path4_full.isValid())
-        XCTAssert(path4.oscMethodAddressMatch(pattern: path4_full) == .full)
-        XCTAssert(path4.oscMethodAddressMatch(pattern: path4_none) == .none)
-        XCTAssert(path4.oscMethodAddressMatch(pattern: path4_container) == .container)
-        XCTAssert(path4.oscMethodAddressMatch(pattern: path4_none_end) == .none)
+        XCTAssert(path4.match(pattern: path4_full) == .full)
+        XCTAssert(path4.match(pattern: path4_none) == .none)
+        XCTAssert(path4.match(pattern: path4_container) == .container)
+        XCTAssert(path4.match(pattern: path4_none_end) == .none)
         
         //Test {}
         let path5 = "/foobar/foo1/bar"
@@ -125,10 +125,10 @@ final class OSCineTests: XCTestCase {
         let path5_none_end = "/foobar/foo?/{rab,rab1}"
         XCTAssert(path5.isValid())
         XCTAssert(!path5_full.isValid())
-        XCTAssert(path5.oscMethodAddressMatch(pattern: path5_full) == .full)
-        XCTAssert(path5.oscMethodAddressMatch(pattern: path5_none) == .none)
-        XCTAssert(path5.oscMethodAddressMatch(pattern: path5_container) == .container)
-        XCTAssert(path5.oscMethodAddressMatch(pattern: path5_none_end) == .none)
+        XCTAssert(path5.match(pattern: path5_full) == .full)
+        XCTAssert(path5.match(pattern: path5_none) == .none)
+        XCTAssert(path5.match(pattern: path5_container) == .container)
+        XCTAssert(path5.match(pattern: path5_none_end) == .none)
         
         //Test //
         let path6 = "/foobar/foo1/bar"
@@ -139,11 +139,11 @@ final class OSCineTests: XCTestCase {
         let path6_none_end = "//bar1"
         XCTAssert(path6.isValid())
         XCTAssert(!path6_full.isValid())
-        XCTAssert(path6.oscMethodAddressMatch(pattern: path6_full) == .full)
-        XCTAssert(path6.oscMethodAddressMatch(pattern: path6_full2) == .full)
-        XCTAssert(path6.oscMethodAddressMatch(pattern: path6_none) == .none)
-        XCTAssert(path6.oscMethodAddressMatch(pattern: path6_container) == .container)
-        XCTAssert(path6.oscMethodAddressMatch(pattern: path6_none_end) == .none)
+        XCTAssert(path6.match(pattern: path6_full) == .full)
+        XCTAssert(path6.match(pattern: path6_full2) == .full)
+        XCTAssert(path6.match(pattern: path6_none) == .none)
+        XCTAssert(path6.match(pattern: path6_container) == .container)
+        XCTAssert(path6.match(pattern: path6_none_end) == .none)
     }
     
     func testSLIPEncodeDecode() {
@@ -178,6 +178,37 @@ final class OSCineTests: XCTestCase {
             testPrint(#function, error, prefix: String.boom)
             XCTFail(error.localizedDescription)
         }
+    }
+    
+    func testArgumentPatternMatching() {
+        let args: OSCArgumentArray = [.float(1.0), .int(1), .boolean(true), .impulse]
+        
+        let pattern: OSCArgumentTypeTagArray = [.float, .int, .true]
+        XCTAssert(!args.matches(pattern: pattern))
+
+        let pattern1: OSCArgumentTypeTagArray = [.anyNumber, .int, .anyBoolean, .impulse]
+        XCTAssert(args.matches(pattern: pattern1))
+
+        let pattern2: OSCArgumentTypeTagArray = [.float, .anyNumber, .anyBoolean, .optional(.impulse)]
+        XCTAssert(args.matches(pattern: pattern2))
+
+        let pattern3: OSCArgumentTypeTagArray = [.float, .anyTag, .true, .optional(.anyTag)]
+        XCTAssert(args.matches(pattern: pattern3))
+
+        let pattern4: OSCArgumentTypeTagArray = [.float, .anyTag, .true, .optional(.anyTag), .optional(.anyNumber)]
+        XCTAssert(args.matches(pattern: pattern4))
+
+        let pattern5: OSCArgumentTypeTagArray = [.float, .anyTag, .true, .impulse, .optional(.anyNumber), .optional(.anyTag)]
+        XCTAssert(args.matches(pattern: pattern5))
+
+        let pattern6: OSCArgumentTypeTagArray = [.optional(.anyNumber), .anyTag, .true, .impulse, .optional(.anyNumber), .optional(.anyTag)]
+        XCTAssert(!args.matches(pattern: pattern6))
+
+        let pattern7: OSCArgumentTypeTagArray = [.float, .null, .true, .anyTag]
+        XCTAssert(!args.matches(pattern: pattern7))
+        
+        let pattern8: OSCArgumentTypeTagArray = [.float, .anyTag, .true, .impulse, .impulse, .optional(.anyNumber), .optional(.anyTag)]
+        XCTAssert(!args.matches(pattern: pattern8))
     }
     
     let server = ServerTest()
@@ -328,10 +359,13 @@ class ServerTest: OSCServerDelegate {
 
 class MethodTest: OSCMethod {
     var addressPattern: OSCAddressPattern
-    var expectation: XCTestExpectation? = nil
-    
-    init(address: OSCAddressPattern) {
+    var requiredArguments: OSCArgumentTypeTagArray?
+
+    var expectation: XCTestExpectation?
+
+    init(address: OSCAddressPattern, requiredArguments: OSCArgumentTypeTagArray? = nil) {
         self.addressPattern = address
+        self.requiredArguments = requiredArguments
     }
     
     func handleMessage(_ message: OSCMessage, for match: OSCPatternMatchType) {
@@ -414,7 +448,7 @@ func testPrint(_ items: Any...,
           terminator: terminator)
 }
 
-fileprivate extension Data {
+extension Data {
     static var hexDigits = Array("0123456789ABCDEF".utf16)
     
     ///Hex representation of the bytes in upper case hex characters

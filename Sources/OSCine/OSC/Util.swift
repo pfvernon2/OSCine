@@ -19,6 +19,15 @@ public enum OSCNetworkingError: Error {
     case notConnected
 }
 
+public enum OSCCodingError: Error {
+    case stringEncodingFailure
+    case invalidArgumentList
+    case invalidMessage
+    case invalidBundle
+    case invalidPacket
+    case invalidAddress
+}
+
 //MARK: - Logging
 
 internal var OSCNetworkLogger: Logger = {
@@ -98,15 +107,4 @@ extension Array {
         self.init()
         reserveCapacity(capacity)
     }
-}
-
-//MARK: - NWProtocolUDP
-
-extension NWProtocolUDP {
-    /// Max datagram payload size
-    ///
-    /// - Note:This is the more conservative of the IPv6 and IPv4 sizes for simplicity.
-    static var maxDatagramSize: Int = {
-        65507
-    }()
 }

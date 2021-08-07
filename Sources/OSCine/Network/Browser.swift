@@ -79,7 +79,7 @@ public class OSCServiceBrowser {
 
 typealias NWBrowserResultSet = Set<NWBrowser.Result>
 extension NWBrowserResultSet {
-    //Utility to return first instance of service matching service name
+    //Utility to return first instance of service matching requested service name
     func firstMatch(serviceName: String) -> NWBrowser.Result? {
         first {
             guard case let NWEndpoint.service(name: name, type: _, domain: _, interface: _) = $0.endpoint else {

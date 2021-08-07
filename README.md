@@ -14,6 +14,8 @@ The design goals for this package are:
 
 Future versions will likely support Swift 5.5 async operations.
 
+While OSCine has fully integrated network support full access to packet creation and parsing are included so that other transport layers could be utilized if desired. 
+
 ### Why another OSC library in Swift? 
 
 I created this package for my own uses as I found the available open source packages lacking for my purposes. Initially I was not planning to release this, however in the process of developing it I found Apples documentation and examples for creating Network Protocol Framers to be shamefully lacking. I felt it was worth contributing this example back to the community simply to make another protocol framer example available. 
@@ -61,8 +63,8 @@ client.connect(serviceName: "MyMixer", timeout: 10.0)
 
 let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
-                           OSCMessage(address: "/mixer/*/mute*", arguments: [.true]), 
-                           OSCMessage(address: "/mixer/*/solo*", arguments: [.false]),
+                           OSCMessage(address: "/mixer/*/mute*", arguments: [.boolean(true)]), 
+                           OSCMessage(address: "/mixer/*/solo*", arguments: [.boolean(true)]),
                            OSCMessage(address: "/mixer/*/fader*", arguments: [.float(0.0)]), 
                            OSCMessage(address: "/mixer/*/eq*", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
                            OSCMessage(address: "/mixer/*/label*", arguments: [.string("")]),
@@ -82,14 +84,15 @@ To begin receiving messages call `server.listen()` with a specific port and/or t
 
 >> *Note -* If you are relying upon Bonjour for client browsing it is advised *not* to specify a port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. 
 
-In order to process OSC messages you will need to register one or more `OSCMethod` classes on your server instance. To implement a method you will need to provide an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. 
+In order to process OSC messages you will need to register one or more `OSCMethod` classes on your server instance. To implement a method you will need to provide an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. Optionally you can supply a list of argument types to `requiredArguments` which can be used to validate that messages have the required data. Your handleMessage function will not be called in the event of an argument mismatch.
 
 The following is a minimaly functional UDP based OSC server with Bonjour service advertisement:
 ```
 class MyMethod: OSCMethod {
     var addressPattern: OSCAddressPattern
-    
-    init(address: OSCAddressPattern) {
+    var requiredArguments: OSCArgumentTypeTagArray? = nil
+
+    init(address: OSCAddressPattern, requiredArguments: OSCArgumentTypeTagArray? = nil) {
         self.addressPattern = address
     }
     
@@ -100,11 +103,11 @@ class MyMethod: OSCMethod {
     }
 }
 
-let mixerMainMute = MyMethod(address: "/mixer/main/mute1")
-let mixerMainSolo = MyMethod(address: "/mixer/main/solo1")
-let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
-let mixerMainEQ = MyMethod(address: "/mixer/main/eq1")
-let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
+let mixerMainMute = MyMethod(address: "/mixer/main/mute1, requiredArguments: [.boolean]")
+let mixerMainSolo = MyMethod(address: "/mixer/main/solo1, requiredArguments: [.boolean]")
+let mixerMainFader = MyMethod(address: "/mixer/main/fader1, requiredArguments: [.float, .optional(.float)]")
+let mixerMainEQ = MyMethod(address: "/mixer/main/eq1, requiredArguments: [.anyNumber, .anyNumber, .anyNumber]")
+let mixerMainLabel = MyMethod(address: "/mixer/main/label1"))
 
 let server = OSCServerUDP()
 server.delegate = self //for listener state notifications
