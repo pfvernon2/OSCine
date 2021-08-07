@@ -14,11 +14,7 @@ The design goals for this package are:
 
 Future versions will likely support Swift 5.5 async operations.
 
-While OSCine has fully integrated network support full access to packet creation and parsing are included so that other transport layers could be utilized if desired. 
-
-### Why another OSC library in Swift? 
-
-I created this package for my own uses as I found the available open source packages lacking for my purposes. Initially I was not planning to release this, however in the process of developing it I found Apples documentation and examples for creating Network Protocol Framers to be shamefully lacking. I felt it was worth contributing this example back to the community simply to make another protocol framer example available. 
+While OSCine has fully integrated network support full access to packet creation and parsing is available so that other transport mechanisms could be utilized if desired. 
 
 ## OSC
 
@@ -45,13 +41,13 @@ If you are building an OSC client you will need to insantiate one of the `OSCCli
 
 To begin sending messages from your client call  `client.connect()` with either a specific address and port or the name of the Bonjour service to browse for. By default the standard OSC service types `_osc._udp` and `_osc._tcp` are used for browsing but this can be set to any custom service type you may care to use. 
 
->> *Note -* For consistency with the Apple Network Framework I have carried through the concept of `connect()` but be aware that UDP is a "connectionless" protocol and this terminology is potentially misleading. When using a UDP client the `connect()` method prepares the network stack to send datagrams to the specified address/port but does not imply, or ensure, that a server is listening at that given address/port. 
+> *Note -* For consistency with the Apple Network Framework I have carried through the concept of `connect()` but be aware that UDP is a "connectionless" protocol and this terminology is potentially misleading. When using a UDP client the `connect()` method prepares the network stack to send datagrams to the specified address/port but does not imply, or ensure, that a server is listening at that given address/port. 
 
-In order to send OSC messages via your client instantiate one or both of the `OSCMessage` and `OSCBundle` classes. The `OSCMessage` class has two properties: `addressPattern` and `arguments`. 
+In order to send OSC messages via your client instantiate one or both of the `OSCMessage` and `OSCBundle` classes. The `OSCMessage` class has two required properties: `addressPattern` and `arguments`. 
 
-The `addressPattern` is either a literal representation of the path to which you want to send a message to a `method` or `container` on the server, or it may be a descriptive "wildcard" represenation of the path. For example `/path/to/control` or `/path/*/control`. There are a number of wildcard options which may be combined in a variety of ways. Please refer to OSC specfication for details on wildcard usage and limitations.
+The `addressPattern` is either a literal representation of the path to which you want to send a message to a `method` or `container` on the server, or it may be a descriptive "wildcard" represenation of the path, i.e. `/path/to/control` or `/path/*/control`. There are a number of wildcard options which may be combined in a variety of ways. Please refer to OSC specfication for details on wildcard usage and limitations.
 
-The  `arguments` are an ordered array of objects conforming to the `OSCArgument` protocol. OSC supports a specific set of argument types. These are represted in OSCine as: `OSCInt, OSCFloat, OSCBool, OSCString, OSCBlob, OSCNull, OSCImpulse, and OSCTimeTag`
+The `arguments` are an ordered array of objects conforming to the `OSCArgument` protocol. OSC 1.1 supports a specific set of argument types which are represted in OSCine as: `OSCInt, OSCFloat, OSCBool, OSCString, OSCBlob, OSCNull, OSCImpulse, and OSCTimeTag`
 
 The following is a minimaly functional UDP based OSC client with Bonjour service discovery:
 ```
@@ -63,11 +59,11 @@ client.connect(serviceName: "MyMixer", timeout: 10.0)
 
 let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
-                           OSCMessage(address: "/mixer/*/mute*", arguments: [.boolean(true)]), 
-                           OSCMessage(address: "/mixer/*/solo*", arguments: [.boolean(true)]),
-                           OSCMessage(address: "/mixer/*/fader*", arguments: [.float(0.0)]), 
-                           OSCMessage(address: "/mixer/*/eq*", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
-                           OSCMessage(address: "/mixer/*/label*", arguments: [.string("")]),
+                           OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.boolean(true)]), 
+                           OSCMessage(addressPattern: "/mixer/*/solo[0-9]", arguments: [.boolean(true)]),
+                           OSCMessage(addressPattern: "/mixer/*/fader[0-9]", arguments: [.float(0.0)]), 
+                           OSCMessage(addressPattern: "/mixer/*/eq", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
+                           OSCMessage(addressPattern: "/mixer/*/label", arguments: [.string("")]),
                        ])
 try client.send(bundle)
 ```
@@ -82,9 +78,11 @@ If you are building an OSC server you will need to insantiate one of the `OSCSer
 
 To begin receiving messages call `server.listen()` with a specific port and/or the name to advertise as your Bonjour service. 
 
->> *Note -* If you are relying upon Bonjour for client browsing it is advised *not* to specify a port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. 
+> *Note -* If you are relying upon Bonjour for client browsing it is advised *not* to specify a port. If you do not specify a port the network stack will assign a port randomly and Bonjour will advertise said port for you. 
 
-In order to process OSC messages you will need to register one or more `OSCMethod` classes on your server instance. To implement a method you will need to provide an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. Optionally you can supply a list of argument types to `requiredArguments` which can be used to validate that messages have the required data. Your handleMessage function will not be called in the event of an argument mismatch.
+In order to process OSC messages you will need to register one or more classes conforming to the protocol `OSCMethod` on your server instance. To implement a method you will need to provide at a minimium an `addressPattern` var and a `handleMessage()` function. Your `handleMessage()` function will be called when either an exact or wildcard match for the specified `OSCAddressPattern` is received. 
+
+Optionally you can supply a pattern of argument types to `requiredArguments` which can be used to validate that messages have the required data. Your handleMessage function will not be called in the event of an argument mismatch.
 
 The following is a minimaly functional UDP based OSC server with Bonjour service advertisement:
 ```
@@ -103,11 +101,11 @@ class MyMethod: OSCMethod {
     }
 }
 
-let mixerMainMute = MyMethod(address: "/mixer/main/mute1, requiredArguments: [.boolean]")
-let mixerMainSolo = MyMethod(address: "/mixer/main/solo1, requiredArguments: [.boolean]")
-let mixerMainFader = MyMethod(address: "/mixer/main/fader1, requiredArguments: [.float, .optional(.float)]")
-let mixerMainEQ = MyMethod(address: "/mixer/main/eq1, requiredArguments: [.anyNumber, .anyNumber, .anyNumber]")
-let mixerMainLabel = MyMethod(address: "/mixer/main/label1"))
+let mixerMainMute = MyMethod(address: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
+let mixerMainSolo = MyMethod(address: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
+let mixerMainFader = MyMethod(address: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
+let mixerMainEQ = MyMethod(address: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
+let mixerMainLabel = MyMethod(address: "/mixer/main/label", requiredArguments: [.anyTag])
 
 let server = OSCServerUDP()
 server.delegate = self //for listener state notifications
@@ -127,7 +125,7 @@ try server.listen(serviceName: "MyMixer")
 
 While not detailed in the OSC specification a number of implementations allow for multicast send and receive of OSC messages and bundles. This is implemented in OSCine as a combination client and server class `OSCMulticastClientServer` which allows for simultaneous send and receive of OSC messages and bundles via a single multicast address and port. This combination design also allows for easy synchronization of OSC methods both within your app and with other devices on the network.
 
->> *IMPORTANT*: Multicast support on iOS and iPadOS 14 and later [requires entitlements available only directly from Apple](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_networking_multicast). 
+> *IMPORTANT*: Multicast support on iOS/iPadOS 14 and later requires [entitlements available only directly from Apple](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_networking_multicast). 
 
 The following is a minimaly functional Multicast implementation:
 ```
@@ -135,11 +133,11 @@ let mcast = OSCMulticastClientServer()
 mcast.delegate = self //for group state notifications
 
 //Begin receiving and dispatching messages to methods
-let mixerMainMute = MyMethod(address: "/mixer/main/mute1"")
-let mixerMainSolo = MyMethod(address: "/mixer/main/solo1"")
-let mixerMainFader = MyMethod(address: "/mixer/main/fader1")
-let mixerMainEQ = MyMethod(address: "/mixer/main/eq1")
-let mixerMainLabel = MyMethod(address: "/mixer/main/label1")
+let mixerMainMute = MyMethod(address: "/mixer/main/mute1", requiredArguments: [.anyBoolean])
+let mixerMainSolo = MyMethod(address: "/mixer/main/solo1", requiredArguments: [.anyBoolean])
+let mixerMainFader = MyMethod(address: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)])
+let mixerMainEQ = MyMethod(address: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber])
+let mixerMainLabel = MyMethod(address: "/mixer/main/label", requiredArguments: [.anyTag])
 try mcast.register(methods: [mixerMainMute, 
                              mixerMainSolo, 
                              mixerMainFader, 
@@ -150,11 +148,11 @@ try mcast.listen(on: "224.0.0.251", port: 12345)
 //Send bundle to all in the multicast group, including ourselves
 let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
                        bundleElements: [
-                            OSCMessage(address: "/mixer/*/mute*", arguments: [.true]), 
-                            OSCMessage(address: "/mixer/*/solo*", arguments: [.false]),
-                            OSCMessage(address: "/mixer/*/fader*", arguments: [.float(0.0)]), 
-                            OSCMessage(address: "/mixer/*/eq*", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
-                            OSCMessage(address: "/mixer/*/label*", arguments: [.string("")]),
+                            OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.true]), 
+                            OSCMessage(addressPattern: "/mixer/*/solo[0-9]", arguments: [.false]),
+                            OSCMessage(addressPattern: "/mixer/*/fader[0-9]", arguments: [.float(0.0)]), 
+                            OSCMessage(addressPattern: "/mixer/*/eq", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
+                            OSCMessage(addressPattern: "/mixer/*/label", arguments: [.string("")]),
                        ])
 try mcast.send(bundle)
 ```
