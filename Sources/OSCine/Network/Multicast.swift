@@ -8,19 +8,19 @@
 import Foundation
 import Network
 
-//MARK: - OSCMulticastClientServerDelegate
+//MARK: - OSCMulticastDelegate
 
 ///Delegate for notifications of network state change of the mulitcast client server
 @available(watchOS 7.0, *)
-public protocol OSCMulticastClientServerDelegate: AnyObject {
+public protocol OSCMulticastDelegate: AnyObject {
     func groupStateChange(state: NWConnectionGroup.State)
 }
 
-//MARK: - OSCMulticastClientServer
+//MARK: - OSCMulticast
 
 @available(watchOS 7.0, *)
-public class OSCMulticastClientServer {
-    weak public var delegate: OSCMulticastClientServerDelegate? = nil
+public class OSCMulticast {
+    weak public var delegate: OSCMulticastDelegate? = nil
     
     internal var group: NWConnectionGroup? = nil
     internal var parameters: NWParameters = {
@@ -40,11 +40,11 @@ public class OSCMulticastClientServer {
         cancel()
     }
     
-    public func listen(on address: NWEndpoint.Host, port: NWEndpoint.Port) throws {
-        try listen(on: .hostPort(host: address, port: port))
+    public func joinGroup(on address: NWEndpoint.Host, port: NWEndpoint.Port) throws {
+        try joinGroup(on: .hostPort(host: address, port: port))
     }
     
-    public func listen(on endpoint: NWEndpoint) throws {
+    public func joinGroup(on endpoint: NWEndpoint) throws {
         let multicast = try NWMulticastGroup(for: [endpoint])
         group = NWConnectionGroup(with: multicast, using: parameters)
         

@@ -377,10 +377,10 @@ class MethodTest: OSCMethod {
     }
 }
 
-class MulticastTest: OSCMulticastClientServerDelegate {
+class MulticastTest: OSCMulticastDelegate {
     var expectation: XCTestExpectation? = nil
-    lazy var mcast: OSCMulticastClientServer = {
-        let mcast = OSCMulticastClientServer()
+    lazy var mcast: OSCMulticast = {
+        let mcast = OSCMulticast()
         mcast.delegate = self
         return mcast
     }()
@@ -411,7 +411,7 @@ class MulticastTest: OSCMulticastClientServerDelegate {
             try mcast.register(methods: testMethods)
             
             //start listening
-            try mcast.listen(on: "224.0.0.251", port: 12345)
+            try mcast.joinGroup(on: "224.0.0.251", port: 12345)
             
             testPrint("Multicast Test Started")
         } catch {
