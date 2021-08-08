@@ -27,7 +27,7 @@ OSCine follows the OSC v1.1 specification closely and relies upon terminology fr
 
 ## Usage
 
-Usage is intended to be as straightforward as possible assuming familiarity with OSC and its terminology. The representative examples below should you get started. Further information and details can be found as *Swift Documentation Comments* in the code itself. 
+Usage is intended to be as straightforward as possible assuming familiarity with OSC and its terminology. The representative examples below, and included test suite, should hopefully get you started. Further information and details can be found as *Swift Documentation Comments* in the code itself.
 
 ### Client
 
