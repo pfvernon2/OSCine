@@ -180,14 +180,17 @@ extension OSCArgumentArray {
             return false
         }
         
+        //check we have only optionals in the tail
+        guard !pattern[firstOptional...].contains(where: {
+            guard case .optional(_) = $0 else { return true }
+            return false
+        }) else {
+            return false
+        }
+
         //compare optionals up to the number of remaining args…
         // optionals past the end can be assumed to match
-        // the filter addresses the case where there are non-optionals in the tail
-        // which we don't support
-        let patternOptionals = pattern[firstOptional..<argTags.endIndex].filter {
-            guard case .optional(_) = $0 else { return false }
-            return true
-        }
+        let patternOptionals = pattern[firstOptional..<argTags.endIndex]
         let argOptionals = argTags[firstOptional...]
         return argOptionals.elementsEqual(patternOptionals) { $0.matches($1) }
     }
