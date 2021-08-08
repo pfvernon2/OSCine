@@ -13,7 +13,7 @@ The design goals for this package are:
 
 Future versions will likely support Swift 5.5 async operations.
 
-* While OSCine has fully integrated network support full access to packet creation and parsing is available so that other transport mechanisms could be utilized if desired. 
+ * While OSCine has fully integrated network support, access to packet creation and parsing is available so that alternate transport libraries could be utilized if desired. 
 
 ## OSC
 
