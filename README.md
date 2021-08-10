@@ -1,10 +1,10 @@
 # OSCine
 
-OSCine is a simple robust Swift client and server implementation of Open Sound Control v1.1.
+OSCine is an easy to use yet robust Swift client and server implementation of Open Sound Control v1.1.
 
 The design goals for this package are:
 * Ease of use
-* No third party dependencies
+* No third-party dependencies
 * Close adherance to OSC v1.1 specification
 * Integrated TCP, UDP, and Multicast network support*
 * Integrated Bonjour advertisement and browsing support
@@ -33,7 +33,7 @@ Usage is intended to be as straightforward as possible assuming familiarity with
 
 ```
 let client = OSCClientUDP()
-client.delegate = self //for network state notifications, see OSCClientDelegate
+client.delegate = self //for connection state notifications - see OSCClientDelegate
 client.connect(serviceName: "MyMixer", timeout: 10.0)
 
 //after connection state change to: .ready
@@ -69,12 +69,12 @@ class MyMethod: OSCMethod {
 }
 
 let server = OSCServerUDP()
-server.delegate = self //for listener state notifications, see OSCServerDelegate
+server.delegate = self //for listener state notifications - see OSCServerDelegate
 try server.register(methods: [MyMethod(addressPattern: "/mixer/main/mute1", requiredArguments: [.anyBoolean]), 
                               MyMethod(addressPattern: "/mixer/main/solo1", requiredArguments: [.anyBoolean]), 
                               MyMethod(addressPattern: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)]), 
                               MyMethod(addressPattern: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber]), 
-                              MyMethod(addressPattern: "/mixer/main/label", requiredArguments: [.anyTag])])
+                              MyMethod(addressPattern: "/mixer/main/label"])
 try server.listen(serviceName: "MyMixer")
 ```
 
@@ -82,7 +82,7 @@ try server.listen(serviceName: "MyMixer")
 
 ```
 let mcast = OSCMulticast()
-mcast.delegate = self //for group state notifications, see OSCMulticastDelegate
+mcast.delegate = self //for group state notifications - see OSCMulticastDelegate
 try mcast.joinGroup(on: "224.0.0251", port: 12345)
 
 //Register methods if you care to process or monitor messages sent to the group
@@ -90,9 +90,9 @@ try mcast.register(methods: [MyMethod(addressPattern: "/mixer/main/mute1", requi
                              MyMethod(addressPattern: "/mixer/main/solo1", requiredArguments: [.anyBoolean]), 
                              MyMethod(addressPattern: "/mixer/main/fader1", requiredArguments: [.float, .optional(.float)]), 
                              MyMethod(addressPattern: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber]), 
-                             MyMethod(addressPattern: "/mixer/main/label", requiredArguments: [.anyTag])])
+                             MyMethod(addressPattern: "/mixer/main/label")
 
-//Note that messages sent to the group will also be delivered to any Methods you register on the Multicast instance.
+//Note that Messages sent to the group will also be delivered to any Methods you register on the Multicast instance.
 let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
                        bundleElements: [
                             OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.true]), 
