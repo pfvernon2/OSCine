@@ -12,7 +12,10 @@ import Foundation
 ///A Message is the fundamental unit of information exchange in OSC.
 ///Messges are comprised of an addressPattern and one or more arguments.
 ///
-///The addressPattern must be a fully qualified or wildcard representation of the address to which to send the message,
+///The addressPattern represents the address of the `Method` in the `Address Space`
+///of the `Server` to which you are sending the `Message`. It may be either a fully qualified
+///address, a wildcard representation of one or more addresses, or a partial `Container` match
+///for an address.
 ///
 ///The arguments must contain one or more of the well known OSC argument types.
 public class OSCMessage: OSCBundleElement {
@@ -53,6 +56,7 @@ public class OSCMessage: OSCBundleElement {
         self.arguments = arguments
     }
     
+    ///Adds an argument to the end of the array of arguments for this message
     public func appendArgument(_ arg: OSCArgument) {
         if arguments == nil {
             arguments = OSCArgumentArray()
@@ -60,18 +64,20 @@ public class OSCMessage: OSCBundleElement {
         arguments?.append(arg)
     }
     
-    ///Returns true if the types (and order) of the arguments in the given array
+    ///Returns true if the types and order of the arguments in the type tag array
     /// match the arguments of this message. This is useful for testing whether
     /// a message has the expected arguments before attempting to query
-    /// thier values.
-    public func argumentsMatch(_ required: OSCArgumentTypeTagArray) -> Bool {
+    /// for values.
+    public func argumentsMatch(_ pattern: OSCArgumentTypeTagArray) -> Bool {
         guard let arguments = arguments else {
             return false
         }
         
-        return arguments.matches(pattern: required)
+        return arguments.matches(pattern: pattern)
     }
     
+    ///Returns an OSC encoded representation of the message suitable for
+    /// transmission to a server.
     public func packet() throws -> Data {
         guard let address = addressPattern,
               let arguments = arguments else {

@@ -35,7 +35,7 @@ extension Data {
     fileprivate static let kOSCPadValue: UInt8 = 0
     fileprivate static let kOSCPadModulo: Int = 4
     
-    //Returns the number of bytes required to pad to the next OSC alignment boundary
+    ///Returns the number of bytes required to pad to the next OSC alignment boundary
     static func OSCPadding(for count: Int) -> Int {
         guard count > .zero else {
             return .zero
@@ -45,11 +45,13 @@ extension Data {
         return padding > .zero ? Data.kOSCPadModulo - padding : .zero
     }
     
+    ///Pads the data as required by OSC.
     mutating func OSCPad() {
         append(Data(repeating: Data.kOSCPadValue,
                     count: Data.OSCPadding(for: count)))
     }
     
+    ///Returns a copy of the data padded as required by OSC.
     func OSCPadded() -> Data {
         var result = self
         result.OSCPad()
@@ -57,11 +59,11 @@ extension Data {
     }
 }
 
-//MARK: - Data Parsing
+//MARK: - Data Parsing - Internal
 
 extension Data {
-    //Returns range of next set of null terminated bytes following
-    // the given index, after first walking over any leading nulls
+    ///Returns range of next set of null terminated bytes following
+    /// the given index, after first walking over any leading nulls
     func nextCStr(after start: Data.Index) -> Range<Int>? {
         guard let begins = self[start...].firstIndex(where: { $0 != 0 }),
               let ends = self[begins...].firstIndex(where: { $0 == 0 }) else {
@@ -71,8 +73,8 @@ extension Data {
         return begins..<ends
     }
     
-    //Attempts to decode data to appropriate OSCPacketContents
-    // type based on leading char
+    ///Attempts to decode data to appropriate OSCPacketContents
+    /// type based on leading char
     func parseOSCPacket() throws -> OSCBundleElement {
         guard let first = first else {
             throw OSCCodingError.invalidPacket
@@ -91,7 +93,7 @@ extension Data {
     }
 }
 
-//MARK: - Array
+//MARK: - Array - Internal
 
 extension Array {
     //helpful init to reserve array capacity at creation time

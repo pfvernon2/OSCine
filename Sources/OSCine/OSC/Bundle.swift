@@ -77,6 +77,7 @@ public class OSCBundle: OSCBundleElement {
         self.elements = elements
     }
     
+    ///Adds an element to the end of the array of elements for this bundle
     public func append(element: OSCBundleElement) {
         if elements == nil {
             elements = OSCBundleElementArray()
@@ -84,6 +85,8 @@ public class OSCBundle: OSCBundleElement {
         elements?.append(element)
     }
     
+    ///Returns an OSC encoded representation of the bundle suitable for
+    /// transmission to a server.
     public func packet() throws -> Data {
         guard let timeTag = timeTag,
               let elements = elements else {

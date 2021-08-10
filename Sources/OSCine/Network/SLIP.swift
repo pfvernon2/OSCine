@@ -24,30 +24,30 @@ enum SLIPEscapeCodes: UInt8 {
 }
 
 extension SLIPEscapeCodes {
-    //Characters needing escape sequences
+    ///Set of characters requiring escape sequences for SLIP encoding
     static var escapedChars: [UInt8] {
         [SLIPEscapeCodes.END.rawValue,
          SLIPEscapeCodes.ESC.rawValue]
     }
     
-    //Escape sequence for end char
+    ///SLIP Escape sequence for end char
     static var endEscape: Data {
         Data([SLIPEscapeCodes.ESC.rawValue,
               SLIPEscapeCodes.ESC_END.rawValue])
     }
     
-    //Escape sequence for esc char
+    ///SLIP Escape sequence for esc char
     static var escEscape: Data {
         Data([SLIPEscapeCodes.ESC.rawValue,
               SLIPEscapeCodes.ESC_ESC.rawValue])
     }
     
-    //Datagram termination sequence
+    ///SLIP datagram termination sequence
     static var end: Data {
         Data([SLIPEscapeCodes.END.rawValue])
     }
     
-    //Datagram escape initiation
+    ///SLIP datagram escape initiation
     static var esc: Data {
         Data([SLIPEscapeCodes.ESC.rawValue])
     }
@@ -57,16 +57,16 @@ extension SLIPEscapeCodes {
 
 //Data extension for conversion to/from SLIP encoded datagrams
 extension Data {
-    //Returns copy of data with SLIP encoding applied
-    // Assumes data is single datagram
+    ///Returns copy of data with SLIP encoding applied
+    /// Assumes data is single datagram
     func SLIPEncoded() -> Data {
         var result = Data(self)
         result.SLIPEncode()
         return result
     }
     
-    //Applies SLIP encoding in place on current data
-    // Assumes data is single datagram
+    ///Applies SLIP encoding in place on current data
+    /// Assumes data is single datagram
     mutating func SLIPEncode() {
         //walk data looking for characters requiring escape and replace with escape sequence
         var nextOffset = startIndex
@@ -92,14 +92,16 @@ extension Data {
         append(SLIPEscapeCodes.end)
     }
     
-    //Returns copy of data with SLIP encoding removed
+    ///Returns copy of data with SLIP encoding removed
+    /// Assumes data is single datagram
     func SLIPDecoded() throws -> Data {
         var result = Data(self)
         try result.SLIPDecode()
         return result
     }
     
-    //Remove SLIP encoding in place on current data
+    ///Remove SLIP encoding in place on current data
+    /// Assumes data is single datagram
     mutating func SLIPDecode() throws {
         //check for END at end... before decode
         if last == SLIPEscapeCodes.END.rawValue {
@@ -130,7 +132,7 @@ extension Data {
 
 //MARK: - Protocol Framer
 
-//Protocol Framer Implementation of SLIP Protocol
+///Protocol Framer Implementation of SLIP Protocol
 @available(watchOS 7.0, *)
 class SLIPProtocol: NWProtocolFramerImplementation {
     static let definition = NWProtocolFramer.Definition(implementation: SLIPProtocol.self)

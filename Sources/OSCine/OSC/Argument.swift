@@ -9,14 +9,12 @@ import Foundation
 
 //MARK: - OSCArgument
 
+///Enum specifying the required OSC argument types
 public enum OSCArgument: Equatable, Hashable {
-    //1.0
     case int(Int32)
     case float(Float32)
     case string(String)
     case blob(Data)
-    
-    //1.1
     case boolean(Bool)
     case null
     case impulse
@@ -35,8 +33,7 @@ public enum OSCArgument: Equatable, Hashable {
     public init(_ timeTag: OSCTimeTag) { self = .timetag(timeTag) }
 }
 
-//Tags for corresponding argument types
-// which can be used for pattern matching
+///Tags for corresponding argument types used for pattern matching
 public extension OSCArgument {
     indirect enum TypeTag {
         //exact match
@@ -51,9 +48,22 @@ public extension OSCArgument {
         case timetag
         
         //pattern match
+        /// - anyTag: Matches any argument tag
         case anyTag
+        
+        /// - anyBoolean: Matches any boolean argumment.
+        ///
+        /// Use 'true' or 'false' to match a specific boolean values.
         case anyBoolean
+        
+        /// - anyNumber: Matches any numeric argumment.
+        ///
+        /// Use 'int' or 'float' to match specific numeric types.
         case anyNumber
+        
+        /// - optional(type): Allows for optional matches of tag types.
+        ///
+        /// *Important:* Optional tags can only be used at the end of argument lists.
         case optional(TypeTag)
         
         var isBool: Bool {
@@ -69,6 +79,7 @@ public extension OSCArgument {
         }
     }
     
+    ///The type tag for the associated argument
     var tag: TypeTag {
         switch self {
         case .int(_):
@@ -124,9 +135,9 @@ extension OSCArgumentArray {
     }
     
     ///Returns heterogenous array of values only if they match the given array of type tags.
-    ///This is useful to both validate arguments and retrieve their values in a single step.
+    ///This is useful to validate arguments and retrieve their values in a single step.
     public func values(matching pattern: OSCArgumentTypeTagArray) -> [Any?]? {
-        guard self.matches(pattern: pattern) else {
+        guard matches(pattern: pattern) else {
             return nil
         }
         
@@ -157,7 +168,7 @@ extension OSCArgumentArray {
         }
     }
     
-    ///Check if the given pattern matches the array of arguments
+    ///Check if the given type tag pattern matches the array of arguments
     public func matches(pattern: OSCArgumentTypeTagArray) -> Bool {
         let argTags = tags()
         
@@ -256,6 +267,7 @@ public struct OSCTimeTag: Codable, Equatable, Comparable, Hashable {
 
 //MARK: - OSCCodable
 
+//Internal protocol for encoding and decoding of OSC argument types in messages.
 protocol OSCCodable {
     associatedtype T
     

@@ -11,13 +11,30 @@
 
 import Foundation
 
+///Enum specifying matches between OSCAddressPattern objects
+public enum OSCPatternMatchType: Comparable {
+    /// - none: No corresponding match between address patterns
+    case none
+    
+    /// - container: "Container" match as defined in OSC.
+    /// This is a partial match of address pattern up to  a path delimiter
+    case container
+    
+    /// - full: A complete match of the two address paths
+    case full
+}
+
 //MARK: - OSCAddressPattern
 
+///A string representation of the address pattern.
+///
+///This might be a fully qualified path to a method, a partial path to a method, i.e. a "continer",
+///or a wildcard representation of a path to a method.
 public typealias OSCAddressPattern = String
 extension OSCAddressPattern {
     public static let kOSCPartDelim: Character = "/"
     
-    //Set of reserved characters for address patterns
+    ///Set of reserved characters for address patterns
     public enum reserved: Character, CaseIterable {
         case space = " "
         case hash = "#"
@@ -34,7 +51,7 @@ extension OSCAddressPattern {
         }()
     }
     
-    //Check for leading part delim and ensure no reserved chars used
+    ///Check for leading part delim and ensure no reserved chars used
     public func isValid() -> Bool {
         first == OSCAddressPattern.kOSCPartDelim
             && reserved.reservedCharSet.isDisjoint(with: CharacterSet(charactersIn: self))
@@ -44,10 +61,10 @@ extension OSCAddressPattern {
 //This is the meat of the address wildcard pattern matching. Sorry it is so ugly,
 // but it's complicated and I wanted to make it easy to support later.
 extension OSCAddressPattern {
-    //Theory of operation...
-    //  Walk the pattern and address char by char matching chars based on
-    //  rules of the various wildcard elements. Break out of loop
-    //  on first occurance of a non-match.
+    ///Matches address patterns including with wildcard evaluations.
+    ///
+    /// - parameter pattern: An address pattern to compare against.
+    /// - returns: Pattern match type, see: OSCPatternMatchType
     public func match(pattern: String) -> OSCPatternMatchType {
         var addressPos = startIndex
         var patternPos = pattern.startIndex
@@ -150,6 +167,10 @@ extension OSCAddressPattern {
             return String(charray).split(separator: ",")
         }
         
+        //Theory of operation...
+        //  Walk both the pattern and address char by char matching each based on
+        //  rules of the various wildcard elements. Break out of loop
+        //  on first occurance of a non-match.
         patternLoop: while let patternChar = currPatternChar() {
             let startPattern = patternPos
             switch patternChar {

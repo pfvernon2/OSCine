@@ -25,6 +25,7 @@ public protocol OSCServer: AnyObject {
 
     func listen(on port: NWEndpoint.Port, serviceName: String?) throws
     func cancel()
+    func shutdown()
     
     func register(method: OSCMethod) throws
     func register(methods: [OSCMethod]) throws
@@ -51,7 +52,7 @@ public class OSCServerUDP: OSCServer, NetworkServer {
     
     public init() {}
     deinit {
-        cancel()
+        shutdown()
     }
 }
 
@@ -84,7 +85,7 @@ public class OSCServerTCP: OSCServer, NetworkServer {
     
     public init() {}
     deinit {
-        cancel()
+        shutdown()
     }
 }
 
@@ -136,6 +137,7 @@ public extension OSCServer {
         server.listener?.start(queue: .main)
     }
     
+    ///Stops the listener but leaves active client connections running
     func cancel() {
         guard let server = self as? NetworkServer else {
             fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
@@ -171,11 +173,22 @@ public extension OSCServer {
         
         server.manager.addressSpace.removeAll()
     }
+    
+    ///Stops the listener and disconnects any active client connections
+    func shutdown() {
+        guard let server = self as? NetworkServer else {
+            fatalError("Adoption of OSCServer requires additional adoptance of NetworkServer")
+        }
+
+        cancel()
+        server.manager.cancelAll()
+    }
 }
 
 //MARK: - OSCConnectionManager
 
 @available(watchOS 7.0, *)
+///Internal class to manage server connections for Apple Network Framework
 internal class OSCConnectionManager {
     var addressSpace = OSCAddressSpace()
     var connections = Array<NWConnection>()

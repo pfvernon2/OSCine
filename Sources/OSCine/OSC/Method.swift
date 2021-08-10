@@ -9,15 +9,18 @@ import Foundation
 
 //MARK: - Method
 
-///A Method is an object to which a Message is dispatched via the AddressSpace
+///OSC defines a Method as an entity to which a Message is dispatched via the AddressSpace
 /// based upon a full or partial match of its address.
 ///
-/// Implement a class conforming to OSCMethod with a
-/// handleMessage() function which will be called when a message
-/// representing a full or partial match for the addressPattern is received.
-/// If the optional requiredArguments is supplied this will be used by the
-/// AddressSpace to filter messages which do not match the required pattern
-/// of arguments.
+///# Usage #
+///
+/// Implement a class conforming to OSCMethod with a handleMessage() function and addressPattern.
+/// The handleMessage() function will be called when a message representing a full or partial match for
+/// the addressPattern is received.
+///
+/// If the optional requiredArguments is supplied it will be used by the
+/// AddressSpace to further filter messages which do not contain the specified pattern
+/// of arguments for the given addressPattern.
 ///
 /// - Note: Wildcards are not allowed in a Methods addressPattern. The
 /// addressPattern must be fully qualified and valid.

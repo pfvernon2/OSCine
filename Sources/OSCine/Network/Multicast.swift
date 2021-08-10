@@ -10,7 +10,7 @@ import Network
 
 //MARK: - OSCMulticastDelegate
 
-///Delegate for notifications of network state change of the mulitcast client server
+///Delegate for notifications of network state change of the mulitcast connection
 @available(watchOS 7.0, *)
 public protocol OSCMulticastDelegate: AnyObject {
     func groupStateChange(state: NWConnectionGroup.State)
@@ -18,6 +18,7 @@ public protocol OSCMulticastDelegate: AnyObject {
 
 //MARK: - OSCMulticast
 
+///TCP based OSC server
 @available(watchOS 7.0, *)
 public class OSCMulticast {
     weak public var delegate: OSCMulticastDelegate? = nil

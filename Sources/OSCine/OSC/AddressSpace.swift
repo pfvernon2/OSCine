@@ -4,30 +4,28 @@
 //
 //  Created by Frank Vernon on 8/5/21.
 //
-//I'm cheating a bit and ignoring the level of 'Container' in the design
-// of this address space.
-//
-// The concept of XPath matching in OSC 1.1 invalidates the tree structure, IMHO,
-// as it potentially requires interrogating all leafs. I have flattened
-// the name space rather than special case the XPath search
-// across all branches.
-//
-// I have instead added the concept of a "container" match
-// which indicates a match at the OSC Container level
-// were this to be a tree, which it is not.
 
 import Foundation
 
-//MARK: - OSCPatternMatchType
-
-public enum OSCPatternMatchType: Comparable {
-    case none
-    case container
-    case full
-}
-
 //MARK: - Address Space
 
+///The collection of Methods to which Messages are dispatched bassed on
+///full or partial matches of thier Address Patterns.
+///
+/// - note:
+///I'm cheating a bit and ignoring the level of 'Container' in the design
+/// of this address space.
+///
+/// The concept of XPath matching in OSC 1.1 invalidates the recommended tree structure, IMHO,
+/// as it potentially requires interrogating all leafs. I have flattened
+/// the name space rather than special case the XPath search
+/// across all branches.
+///
+/// I have instead added the concept of a "container" match
+/// which indicates a match at the OSC Container level
+/// were this to be a tree, which it is not.
+///
+/// See: OSCPatternMatchType
 public typealias OSCAddressSpace = Array<OSCMethod>
 public extension OSCAddressSpace {
     mutating func register(methods: [OSCMethod]) throws {
