@@ -2,7 +2,7 @@
 
 OSCine is an easy to use yet robust Swift client and server implementation of Open Sound Control v1.1.
 
-The design goals for this package are:
+The motivations and goals for this package are:
 * Ease of use
 * No third-party dependencies
 * Close adherance to OSC v1.1 specification
@@ -16,6 +16,8 @@ Future versions will likely support Swift 5.5 async operations.
  * While OSCine has fully integrated network support, access to packet creation and parsing is available so that alternate transport libraries could be utilized if desired. 
 
 > *IMPORTANT*: Multicast support on iOS/iPadOS 14 and later requires [entitlements available only directly from Apple](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_networking_multicast). 
+
+This package was initially created for my own uses as I found other Swift OSC packages lacking, primarily in their dependence upon third-party libraries. I am making this available via the included MIT style license in hopes others may find it useful. In particular I'm hoping this may be of interest to others attempting to implement Apple Netwok Protocol Framers. I found Apple documentation on framers to be seriously lacking and could find no open source examples. The included SLIP framer should be generally useful to anyone requiring SLIP support however it is likely more useful as an example of a 'data encoding' style protocol framer.
 
 ## OSC
 
