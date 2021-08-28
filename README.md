@@ -93,6 +93,8 @@ try mcast.register(methods: [MyMethod(addressPattern: "/mixer/main/mute1", requi
                              MyMethod(addressPattern: "/mixer/main/eq", requiredArguments: [.anyNumber, .anyNumber, .anyNumber]), 
                              MyMethod(addressPattern: "/mixer/main/label")
 
+//after connection state change to: .ready
+
 //Note that Messages sent to the group will also be delivered to any Methods you register on the Multicast instance.
 let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
