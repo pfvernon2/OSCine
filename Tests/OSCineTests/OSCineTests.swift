@@ -8,7 +8,7 @@ let mcastAddressEndpoint: NWEndpoint = .hostPort(host: "239.65.11.3", port: 6511
 let message = OSCMessage(addressPattern: "/i/T/f/F",
                          arguments:[
                             .int(1),
-                            .boolean(true),
+                            .true,
                             .float(2.0),
                             .boolean(false)
                          ])
@@ -37,7 +37,7 @@ var testMessages: [OSCMessage] = {
                               arguments: [.string("This is a test")])
     
     let message5 = OSCMessage(addressPattern: "//master",
-                              arguments: [.boolean(true)])
+                              arguments: [.true])
     
     let message6 = OSCMessage(addressPattern: "//blob",
                               arguments: [.blob(datagram)])
@@ -368,11 +368,14 @@ class MethodTest: OSCMethod {
         self.requiredArguments = requiredArguments
     }
     
-    func handleMessage(_ message: OSCMessage, for match: OSCPatternMatchType) {
+    func handleMessage(_ message: OSCMessage,
+                       for match: OSCPatternMatchType,
+                       at timeTag: OSCTimeTag?) {
         testPrint("Handled message: \(message.addressPattern ?? "bad address")",
                   "match: \(match)",
                   "method: \(addressPattern)",
-                  "arguments: \(String(describing: message.arguments))")
+                  "arguments: \(String(describing: message.arguments))",
+                  "time tag: \(String(describing: timeTag?.date))")
         expectation?.fulfill()
     }
 }

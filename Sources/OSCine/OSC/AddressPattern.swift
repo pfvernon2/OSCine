@@ -16,7 +16,7 @@ public enum OSCPatternMatchType: Comparable {
     /// - none: No corresponding match between address patterns
     case none
     
-    /// - container: "Container" match as defined in OSC.
+    /// - container: "Container" match as defined in OSC
     /// This is a partial match of address pattern up to  a path delimiter
     case container
     
@@ -28,7 +28,7 @@ public enum OSCPatternMatchType: Comparable {
 
 ///A string representation of the address pattern.
 ///
-///This might be a fully qualified path to a method, a partial path to a method, i.e. a "continer",
+///This might be a fully qualified path to a method, a partial path to a method (i.e. a "continer"),
 ///or a wildcard representation of a path to a method.
 public typealias OSCAddressPattern = String
 extension OSCAddressPattern {
@@ -61,7 +61,7 @@ extension OSCAddressPattern {
 //This is the meat of the address wildcard pattern matching. Sorry it is so ugly,
 // but it's complicated and I wanted to make it easy to support later.
 extension OSCAddressPattern {
-    ///Matches address patterns including with wildcard evaluations.
+    ///Matches address patterns including those with wildcard evaluations.
     ///
     /// - parameter pattern: An address pattern to compare against.
     /// - returns: Pattern match type, see: OSCPatternMatchType
@@ -69,16 +69,19 @@ extension OSCAddressPattern {
         var addressPos = startIndex
         var patternPos = pattern.startIndex
         
+        ///increment address position
         func addressInc(_ count: Int = 1) {
             //note: this is potentially unsafe - may walk past end
             // but we are in theory protected by logic used below
             addressPos = index(addressPos, offsetBy: count)
         }
         
+        ///address char at current position
         func currAddressChar() -> Character? {
             addressPos < endIndex ? self[addressPos] : nil
         }
         
+        ///remainder of address segment up to part delimiter
         func currAddressSegment() -> Substring {
             guard let segment = self[addressPos...].range(of: String(OSCAddressPattern.kOSCPartDelim)) else {
                 return self[addressPos...]
@@ -86,6 +89,7 @@ extension OSCAddressPattern {
             return self[addressPos..<segment.lowerBound]
         }
         
+        ///address char before current position
         func prevAddressChar() -> Character? {
             guard addressPos > startIndex else {
                 return nil
@@ -93,14 +97,17 @@ extension OSCAddressPattern {
             return self[index(addressPos, offsetBy: -1)]
         }
         
+        ///increment pattern position
         func patternInc() {
             patternPos = pattern.index(after: patternPos)
         }
         
+        ///pattern char at current position
         func currPatternChar() -> Character? {
             patternPos < pattern.endIndex ? pattern[patternPos] : nil
         }
         
+        ///range of pattern chars... used to extract wildcard sequences
         func patternCharsBetween(start: Character, end: Character) -> Array<Character>? {
             guard currPatternChar() == start else {
                 return nil
@@ -127,6 +134,7 @@ extension OSCAddressPattern {
             return charray
         }
         
+        ///parse pattern chars between brackets and potentially expand ranges
         func bracketCharSet() -> (Bool, Array<Character>)? {
             guard var charray = patternCharsBetween(start: "[", end: "]") else {
                 return nil
@@ -159,6 +167,7 @@ extension OSCAddressPattern {
             return (inverted, charray)
         }
         
+        ///parse pattern string sets
         func parenStringSet() -> [Self.SubSequence]? {
             guard let charray = patternCharsBetween(start: "{", end: "}") else {
                 return nil
@@ -168,7 +177,7 @@ extension OSCAddressPattern {
         }
         
         //Theory of operation...
-        //  Walk both the pattern and address char by char matching each based on
+        //  Walk both the pattern and address matching chars based on
         //  rules of the various wildcard elements. Break out of loop
         //  on first occurance of a non-match.
         patternLoop: while let patternChar = currPatternChar() {
@@ -202,7 +211,7 @@ extension OSCAddressPattern {
             case "[": //Match any from set or range of chars
                 //match zero or more chars based on the set of characters expressed within the brackets,
                 // except segment termination or end of address
-                // /foo/bar[1-2] would match: /foo/bar1 and /foo/bar12 or /foo/bar, but not /foo/bar/1
+                // /foo/bar[0-9] would match: /foo/bar1 and /foo/bar12 or /foo/bar, but not /foo/bar/1
                 guard let (inverted, charray) = bracketCharSet() else {
                     addressPos = endIndex
                     patternPos = startPattern
@@ -282,8 +291,10 @@ extension OSCAddressPattern {
                 }
                 
             default:
-                //match characters
-                guard let addrChar = currAddressChar(), addrChar == currPatternChar() else {
+                //match address and pattern characters
+                guard let addrChar = currAddressChar(),
+                      let patternChar = currPatternChar(),
+                      addrChar == patternChar else {
                     break patternLoop
                 }
                 

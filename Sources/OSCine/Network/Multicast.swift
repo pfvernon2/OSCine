@@ -10,16 +10,14 @@ import Network
 
 //MARK: - OSCMulticastDelegate
 
-///Delegate for notifications of network state change of the mulitcast connection
-@available(watchOS 7.0, *)
+///Delegate for notifications of network state change
 public protocol OSCMulticastDelegate: AnyObject {
     func groupStateChange(state: NWConnectionGroup.State)
 }
 
 //MARK: - OSCMulticast
 
-///TCP based OSC server
-@available(watchOS 7.0, *)
+///Multicast based OSC client and server
 public class OSCMulticast {
     weak public var delegate: OSCMulticastDelegate? = nil
     
@@ -33,7 +31,7 @@ public class OSCMulticast {
     
     internal var manager: OSCConnectionManager = OSCConnectionManager()
     
-    internal let sendQueue = DispatchQueue(label: "com.cyberdev.oscmulticastclientserver", qos: .utility)
+    internal let sendQueue = DispatchQueue(label: "com.cyberdev.oscmulticast", qos: .utility)
     internal var sendSemaphore: DispatchSemaphore = DispatchSemaphore(value: 1)
     
     public init() {}
@@ -125,7 +123,6 @@ public class OSCMulticast {
 
 //MARK: - NWProtocolUDP
 
-@available(watchOS 7.0, *)
 extension NWProtocolUDP {
     /// Max datagram payload size
     ///

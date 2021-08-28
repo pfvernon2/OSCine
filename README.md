@@ -40,8 +40,8 @@ client.connect(serviceName: "MyMixer", timeout: 10.0)
 
 let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
-                           OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.boolean(true)]), 
-                           OSCMessage(addressPattern: "/mixer/*/solo[0-9]", arguments: [.boolean(true)]),
+                           OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.true]), 
+                           OSCMessage(addressPattern: "/mixer/*/solo[0-9]", arguments: [.false]),
                            OSCMessage(addressPattern: "/mixer/*/fader[0-9]", arguments: [.float(0.0)]), 
                            OSCMessage(addressPattern: "/mixer/*/eq", arguments: [.float(0.0), .float(0.0), .float(0.0)]), 
                            OSCMessage(addressPattern: "/mixer/*/label", arguments: [.string("")]),
@@ -61,10 +61,11 @@ class MyMethod: OSCMethod {
         self.requiredArguments = requiredArguments
     }
     
-    func handleMessage(_ message: OSCMessage, for match: OSCPatternMatchType) {
+    func handleMessage(_ message: OSCMessage, for match: OSCPatternMatchType, at timeTag: OSCTimeTag?) {
         print("Received message: \(message.addressPattern)",
               "with match: \(match)",
-              "arguments: \(String(describing: message.arguments))")
+              "arguments: \(String(describing: message.arguments)),
+              "time tag: \(String(describing: timeTag?.date))"")
     }
 }
 
@@ -83,7 +84,7 @@ try server.listen(serviceName: "MyMixer")
 ```
 let mcast = OSCMulticast()
 mcast.delegate = self //for group state notifications - see OSCMulticastDelegate
-try mcast.joinGroup(on: "224.0.0251", port: 12345)
+try mcast.joinGroup(on: "224.0.0.251", port: 12345)
 
 //Register methods if you care to process or monitor messages sent to the group
 try mcast.register(methods: [MyMethod(addressPattern: "/mixer/main/mute1", requiredArguments: [.anyBoolean]), 
@@ -93,7 +94,7 @@ try mcast.register(methods: [MyMethod(addressPattern: "/mixer/main/mute1", requi
                              MyMethod(addressPattern: "/mixer/main/label")
 
 //Note that Messages sent to the group will also be delivered to any Methods you register on the Multicast instance.
-let bundle = OSCBundle(timeTag: OSCTimeTag(immediate: true),
+let bundle = OSCBundle(timeTag: OSCTimeTag.immediate,
                        bundleElements: [
                             OSCMessage(addressPattern: "/mixer/*/mute[0-9]", arguments: [.true]), 
                             OSCMessage(addressPattern: "/mixer/*/solo[0-9]", arguments: [.false]),

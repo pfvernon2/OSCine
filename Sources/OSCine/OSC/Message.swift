@@ -10,12 +10,11 @@ import Foundation
 //MARK: - Message
 
 ///A Message is the fundamental unit of information exchange in OSC.
-///Messges are comprised of an addressPattern and one or more arguments.
+///Messges are comprised of an `Address Pattern` and one or more `Arguments`.
 ///
-///The addressPattern represents the address of the `Method` in the `Address Space`
-///of the `Server` to which you are sending the `Message`. It may be either a fully qualified
-///address, a wildcard representation of one or more addresses, or a partial `Container` match
-///for an address.
+///The address pattern represents the address of one or more `Methods` in the `Address Space`
+///of the `Server` to which you are sending the `Message`. It may be either a fully qualified address,
+///a wildcard representation of one or more addresses, or a partial `Container` match for an address.
 ///
 ///The arguments must contain one or more of the well known OSC argument types.
 public class OSCMessage: OSCBundleElement {

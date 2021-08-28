@@ -58,7 +58,7 @@ extension SLIPEscapeCodes {
 //Data extension for conversion to/from SLIP encoded datagrams
 extension Data {
     ///Returns copy of data with SLIP encoding applied
-    /// Assumes data is single datagram
+    /// Assumes data is single complete datagram
     func SLIPEncoded() -> Data {
         var result = Data(self)
         result.SLIPEncode()
@@ -66,7 +66,7 @@ extension Data {
     }
     
     ///Applies SLIP encoding in place on current data
-    /// Assumes data is single datagram
+    /// Assumes data is single complete datagram
     mutating func SLIPEncode() {
         //walk data looking for characters requiring escape and replace with escape sequence
         var nextOffset = startIndex
@@ -93,7 +93,7 @@ extension Data {
     }
     
     ///Returns copy of data with SLIP encoding removed
-    /// Assumes data is single datagram
+    /// Assumes data is single complete datagram
     func SLIPDecoded() throws -> Data {
         var result = Data(self)
         try result.SLIPDecode()
@@ -101,7 +101,7 @@ extension Data {
     }
     
     ///Remove SLIP encoding in place on current data
-    /// Assumes data is single datagram
+    /// Assumes data is single complete datagram
     mutating func SLIPDecode() throws {
         //check for END at end... before decode
         if last == SLIPEscapeCodes.END.rawValue {
@@ -133,7 +133,6 @@ extension Data {
 //MARK: - Protocol Framer
 
 ///Protocol Framer Implementation of SLIP Protocol
-@available(watchOS 7.0, *)
 class SLIPProtocol: NWProtocolFramerImplementation {
     static let definition = NWProtocolFramer.Definition(implementation: SLIPProtocol.self)
     static var label: String { "SLIP" }
@@ -154,8 +153,6 @@ class SLIPProtocol: NWProtocolFramerImplementation {
             let parsed = framer.parseInput(minimumIncompleteLength: 1,
                                            maximumLength: Int.max) { (buffer, isComplete) -> Int in
                 //Confirm we have a buffer and that it contains at least one datagram terminator
-                //This is kind of cheating but testing for partial SLIP escape sequences complicated things unnecessarily
-                // as we need the complete packet before data is delivered up the stack
                 guard let buffer = buffer, let datagramTerminator = buffer.firstIndex(of: SLIPEscapeCodes.END.rawValue) else {
                     //many/most datagrams will be short so ask for more data as quickly as available
                     return .zero
@@ -170,7 +167,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                 }
                 
                 //even if we fail parsing return data as consumed since we can't process it
-                //this will drop the message
+                //this will drop the message but failure will have been logged.
                 return datagramTerminator + 1
             }
             
@@ -204,7 +201,7 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         //write up to, but not including, the character needing escape without copying data
                         try framer.writeOutputNoCopy(length: esc)
                         
-                        //send the associated escape sequence
+                        //write the associated escape sequence
                         switch slipEsc {
                         case SLIPEscapeCodes.END:
                             framer.writeOutput(data: SLIPEscapeCodes.endEscape)
@@ -218,7 +215,8 @@ class SLIPProtocol: NWProtocolFramerImplementation {
                         
                         //skip over encoded char on next iteration
                         // note: writeOutputNoCopy() advances the data position for us
-                        //       so only indicate the data we need to skip over here
+                        //       so only indicate the single escaped char we need to
+                        //       skip over here
                         return 1
                     } else {
                         //nothing to escpape - send this entire portion of the message
@@ -243,7 +241,6 @@ class SLIPProtocol: NWProtocolFramerImplementation {
     }
 }
 
-@available(watchOS 7.0, *)
 extension NWProtocolFramer.Message {
     convenience init(message: OSCMessage) {
         self.init(definition: SLIPProtocol.definition)

@@ -9,13 +9,15 @@ import Foundation
 
 //MARK: - OSCArgument
 
-///Enum specifying the required OSC argument types
+///Enum specifying OSC argument types
 public enum OSCArgument: Equatable, Hashable {
     case int(Int32)
     case float(Float32)
     case string(String)
     case blob(Data)
     case boolean(Bool)
+    case `true`
+    case `false`
     case null
     case impulse
     case timetag(OSCTimeTag)
@@ -33,7 +35,7 @@ public enum OSCArgument: Equatable, Hashable {
     public init(_ timeTag: OSCTimeTag) { self = .timetag(timeTag) }
 }
 
-///Tags for corresponding argument types used for pattern matching
+///Tags for corresponding argument types used in pattern matching
 public extension OSCArgument {
     indirect enum TypeTag {
         //exact match
@@ -53,7 +55,7 @@ public extension OSCArgument {
         
         /// - anyBoolean: Matches any boolean argumment.
         ///
-        /// Use 'true' or 'false' to match a specific boolean values.
+        /// Use `.true` or `.false` to match a specific boolean values.
         case anyBoolean
         
         /// - anyNumber: Matches any numeric argumment.
@@ -63,7 +65,7 @@ public extension OSCArgument {
         
         /// - optional(type): Allows for optional matches of tag types.
         ///
-        /// *Important:* Optional tags can only be used at the end of argument lists.
+        /// *Important:* Optional tags can only appear at the end of argument type lists.
         case optional(TypeTag)
         
         var isBool: Bool {
@@ -92,6 +94,10 @@ public extension OSCArgument {
             return .blob
         case .boolean(let value):
             return value ? .true : .false
+        case .true:
+            return .true
+        case .false:
+            return .false
         case .null:
             return .null
         case .impulse:
@@ -158,6 +164,10 @@ extension OSCArgumentArray {
                 return value
             case .boolean(let value):
                 return value
+            case .true:
+                return true
+            case .false:
+                return false
             case .null:
                 return nil
             case .impulse:
@@ -209,6 +219,7 @@ extension OSCArgumentArray {
 
 //MARK: - OSCTimeTag
 
+///OSC TimeTag argument
 public struct OSCTimeTag: Codable, Equatable, Comparable, Hashable {
     public var seconds: UInt32
     public var picoseconds: UInt32
@@ -473,7 +484,7 @@ internal extension OSCArgument {
         case .blob(let value):
             return try value.OSCEncode()
 
-        case .boolean(_), .null, .impulse:
+        case .boolean(_), .true, .false, .null, .impulse:
             return Data()
 
         case .timetag(let value):

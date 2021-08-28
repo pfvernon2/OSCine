@@ -10,15 +10,14 @@ import Network
 
 //MARK: - OSCServerDelegate
 
-///Delegate for notifications of network state change of the listener
-@available(watchOS 7.0, *)
+///Delegate for notifications of network state change
 public protocol OSCServerDelegate: AnyObject {
     func listenerStateChange(state: NWListener.State)
 }
 
 //MARK: - OSCServer
 
-@available(watchOS 7.0, *)
+///Protocol defining OSC server behavior
 public protocol OSCServer: AnyObject {
     var delegate: OSCServerDelegate? { get set }
     var serviceType: String { get set }
@@ -37,7 +36,6 @@ public protocol OSCServer: AnyObject {
 //MARK: - OSCServerUDP
 
 ///UDP based OSC server
-@available(watchOS 7.0, *)
 public class OSCServerUDP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeUDP
@@ -59,7 +57,6 @@ public class OSCServerUDP: OSCServer, NetworkServer {
 //MARK: - OSCServerTCP
 
 ///TCP based OSC server
-@available(watchOS 7.0, *)
 public class OSCServerTCP: OSCServer, NetworkServer {
     weak public var delegate: OSCServerDelegate? = nil
     public var serviceType: String = kOSCServiceTypeTCP
@@ -91,14 +88,12 @@ public class OSCServerTCP: OSCServer, NetworkServer {
 
 //MARK: - OSCNetworkServer protocol
 
-@available(watchOS 7.0, *)
 internal protocol NetworkServer: AnyObject {
     var listener: NWListener? { get set }
     var parameters: NWParameters { get set }
     var manager: OSCConnectionManager { get set }
 }
 
-@available(watchOS 7.0, *)
 public extension OSCServer {
     func listen(on port: NWEndpoint.Port = .any, serviceName: String? = nil) throws {
         guard let server = self as? NetworkServer else {
@@ -187,7 +182,6 @@ public extension OSCServer {
 
 //MARK: - OSCConnectionManager
 
-@available(watchOS 7.0, *)
 ///Internal class to manage server connections for Apple Network Framework
 internal class OSCConnectionManager {
     var addressSpace = OSCAddressSpace()

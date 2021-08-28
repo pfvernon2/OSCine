@@ -19,7 +19,13 @@ public typealias OSCBundleElementArray = Array<OSCBundleElement>
 
 //MARK: - Bundle
 
-///A Bundle is a collection of Messages and potentially other Bundles.
+///A Bundle is a collection of Messages and/or other Bundles.
+///It consists of a `TimeTag` and one or more `Elements`. Elements
+///may be `Messages` or other `Bundles`.
+///
+///Bundles are a convenient way to send multiple messages in a single packet.
+///More importantly, however, they are used to indicate when sets of messages
+///should be applied simultaneously on the server, possibly at a future date.
 public class OSCBundle: OSCBundleElement {
     static let kOSCBundleIdentifier = "#bundle"
     static let kOSCBundlePrefix: Character = "#"
