@@ -13,13 +13,17 @@ import Network
 ///Simple Bonjour browser with optional timeout.
 ///
 ///This class is primarly intended for internal use but may be useful if you plan to present
-///a list of available OSC servers rather than simply defaulting to the first available.
+///a list of available OSC servers rather than simply defaulting to the first match.
 public class OSCServiceBrowser {
     private (set) var serviceType: String
     
     internal var parameters: NWParameters
     internal var browser: NWBrowser?
-    internal var browserTimer: Timer?
+    internal var browserTimer: Timer? {
+        didSet {
+            browserTimer?.tolerance = 0.25
+        }
+    }
     
     public init(serviceType: String, parameters: NWParameters) {
         self.serviceType = serviceType
@@ -32,8 +36,9 @@ public class OSCServiceBrowser {
     
     public func start(timeout: TimeInterval? = nil,
                       _ updates: @escaping (Set<NWBrowser.Result>?, NWError?)->Swift.Void) {
-        browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
-        browser?.stateUpdateHandler = { [weak self] newState in
+        let newBrowser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: parameters)
+        
+        newBrowser.stateUpdateHandler = { [weak self] newState in
             switch newState {
             case .failed(let error):
                 OSCLogDebug("Browser failed: \(error.localizedDescription)")
@@ -49,27 +54,32 @@ public class OSCServiceBrowser {
             }
         }
         
-        browser?.browseResultsChangedHandler = { results, changes in
+        newBrowser.browseResultsChangedHandler = { results, changes in
             self.browserTimer?.invalidate()
             updates(results, nil)
         }
-        
+                
         // Start browsing and ask for updates on the main queue.
-        OSCLogDebug("Starting browser for: \(self.browser?.debugDescription ?? "?")")
-        browser?.start(queue: .main)
-        
-        //start the browser timer if requested
-        if let timeout = timeout {
-            browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
-                self?.cancel()
-                updates(nil, NWError.posix(POSIXErrorCode.ETIMEDOUT))
+        DispatchQueue.main.async {
+            self.browser = newBrowser
+
+            OSCLogDebug("Starting browser for: \(newBrowser.debugDescription)")
+            newBrowser.start(queue: .main)
+            
+            //start the browser timer if requested
+            if let timeout = timeout {
+                self.browserTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] timer in
+                    OSCLogDebug("Browser timer fired for: \(newBrowser.debugDescription)")
+                    self?.cancel()
+                    updates(nil, NWError.posix(POSIXErrorCode.ETIMEDOUT))
+                }
             }
-            browserTimer?.tolerance = 0.25
         }
     }
     
     public func cancel() {
         browser?.cancel()
+        browser = nil
         browserTimer?.invalidate()
         browserTimer = nil
     }
